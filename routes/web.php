@@ -9,6 +9,7 @@ use App\Livewire\Transaksi\KasirPos;
 use App\Livewire\Transaksi\ReturPenjualan;
 use App\Livewire\Master\PenyesuaianStok;
 use App\Livewire\Master\PelangganIndex;
+use App\Livewire\Master\ProdukIndex;
 
 // Route Authentication (Guest)
 Route::middleware(['guest'])->group(function () {
@@ -27,7 +28,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Master Data
     Route::get('/master/pelanggan', PelangganIndex::class)->name('master.pelanggan');
-    // Note: Anda bisa menduplikat PelangganIndex untuk MarketingIndex dan ProdukIndex nantinya
+    Route::get('/master/produk', ProdukIndex::class)->name('master.produk');
     
     // Proses Logout (Non-Livewire Standard Route)
     Route::post('/logout', function() {
