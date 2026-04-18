@@ -26,7 +26,7 @@ class ReturnService
 
         return DB::transaction(function () use ($idTransaksiPenjualan, $userId, $itemsRetur, $catatan) {
             
-            // Kunci Transaksi Induk
+            // Kunci Transaksi Induk (Pessimistic Locking)
             $transaksiAwal = TransaksiPenjualan::lockForUpdate()->find($idTransaksiPenjualan);
             if (!$transaksiAwal) {
                 throw new Exception("Nota penjualan asli tidak ditemukan.");
@@ -40,7 +40,7 @@ class ReturnService
                 'id_transaksi_penjualan' => $transaksiAwal->id_transaksi_penjualan,
                 'user_id' => $userId,
                 'tanggal_retur' => now(),
-                'total_biaya_retur' => 0, // Diupdate di akhir
+                'total_biaya_retur' => 0, 
                 'catatan' => $catatan,
             ]);
 
@@ -54,7 +54,7 @@ class ReturnService
                     throw new Exception("Item detail tidak valid untuk nota ini.");
                 }
 
-                // VALIDASI MAX RETUR (Mencegah pelanggan meretur lebih dari yang dibeli)
+                // VALIDASI MAX RETUR
                 $sisaBisaDiretur = $detailAwal->jumlah - $detailAwal->jumlah_diretur;
                 if ($qtyRetur > $sisaBisaDiretur) {
                     throw new Exception("Jumlah retur melebihi batas. Sisa yang boleh diretur: " . $sisaBisaDiretur);
@@ -68,20 +68,16 @@ class ReturnService
                     throw new Exception("Data produk fisik (lama/pengganti) tidak ditemukan.");
                 }
 
-                // Pastikan stok produk pengganti cukup
-                if ($produkPengganti->lacak_stok && $produkPengganti->stok_saat_ini < $qtyRetur) {
-                    throw new Exception("Stok produk pengganti ({$produkPengganti->nama_produk}) tidak mencukupi.");
-                }
-
                 // --- KALKULASI UANG ---
-                // Misal: Harga Lama 100k, Harga Baru 150k. Selisih = 50k (Nombok)
                 $hargaTotalLama = $detailAwal->harga_satuan * $qtyRetur;
                 $hargaTotalBaru = $produkPengganti->harga_jual_satuan * $qtyRetur;
                 $subtotalBiaya = $hargaTotalBaru - $hargaTotalLama; 
                 $totalBiayaRetur += $subtotalBiaya;
 
-                // --- MANAJEMEN STOK PRODUK LAMA (DIKEMBALIKAN) ---
-                // Jika Bagus, stok gudang bertambah. Jika Rusak, stok hangus (dibuang/masuk ruang cacat).
+
+                // ==========================================================
+                // TAHAP 1: MANAJEMEN STOK PRODUK LAMA (DIKEMBALIKAN KE TOKO)
+                // ==========================================================
                 if ($item['kondisi_barang_dikembalikan'] === 'BAGUS' && $produkLama->lacak_stok) {
                     $stokSebelumLama = $produkLama->stok_saat_ini;
                     $stokSesudahLama = $stokSebelumLama + $qtyRetur;
@@ -92,7 +88,7 @@ class ReturnService
                         'id_produk' => $produkLama->id_produk,
                         'user_id' => $userId,
                         'id_retur' => $transaksiRetur->id_retur,
-                        'tipe' => 'MASUK', // Barang masuk ke gudang karena retur
+                        'tipe' => 'MASUK', 
                         'jumlah' => $qtyRetur,
                         'stok_sebelum' => $stokSebelumLama,
                         'stok_sesudah' => $stokSesudahLama,
@@ -100,8 +96,25 @@ class ReturnService
                     ]);
                 }
 
-                // --- MANAJEMEN STOK PRODUK PENGGANTI (DIKELUARKAN) ---
+
+                // ==========================================================
+                // TAHAP 2: MANAJEMEN STOK PRODUK PENGGANTI (DIKELUARKAN TOKO)
+                // ==========================================================
                 if ($produkPengganti->lacak_stok) {
+                    
+                    // 🐛 FIX BUG RACE-CONDITION MEMORY!
+                    // Jika barang pengganti adalah barang yang SAMA dengan yang dikembalikan di atas,
+                    // memori PHP masih mengira stoknya adalah stok lama. 
+                    // Kita wajib me-refresh data produk pengganti dari Database agar mendapat stok terbaru (yang sudah +1).
+                    if ($produkPengganti->id_produk === $produkLama->id_produk) {
+                        $produkPengganti->refresh();
+                    }
+
+                    // Pastikan stok produk pengganti cukup setelah di-refresh
+                    if ($produkPengganti->stok_saat_ini < $qtyRetur) {
+                        throw new Exception("Stok produk pengganti ({$produkPengganti->nama_produk}) tidak mencukupi untuk ditukar. Sisa stok: " . $produkPengganti->stok_saat_ini);
+                    }
+
                     $stokSebelumBaru = $produkPengganti->stok_saat_ini;
                     $stokSesudahBaru = $stokSebelumBaru - $qtyRetur;
 
@@ -111,7 +124,7 @@ class ReturnService
                         'id_produk' => $produkPengganti->id_produk,
                         'user_id' => $userId,
                         'id_retur' => $transaksiRetur->id_retur,
-                        'tipe' => 'KELUAR', // Barang pengganti keluar gudang
+                        'tipe' => 'KELUAR', 
                         'jumlah' => $qtyRetur,
                         'stok_sebelum' => $stokSebelumBaru,
                         'stok_sesudah' => $stokSesudahBaru,

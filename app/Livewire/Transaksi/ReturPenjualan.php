@@ -4,140 +4,179 @@ namespace App\Livewire\Transaksi;
 
 use Livewire\Component;
 use App\Models\TransaksiPenjualan;
+use App\Models\DetailPenjualan;
 use App\Models\Produk;
 use App\Services\ReturnService;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class ReturPenjualan extends Component
 {
-    public $kode_nota = '';
-    public $transaksi_aktif = null;
+    // State Filter Nota
+    public $filter_tanggal_mulai;
+    public $filter_tanggal_akhir;
+    public $filter_keyword = '';
     
-    // Form Retur Sementara
-    public $items_retur = []; // Keranjang penukaran
-    public $catatan = '';
+    // State Tampilan Nota
+    public $notaTerpilih = null;
 
-    // State Input per baris penukaran
-    public $pilih_detail_id = '';
+    // State Modal Retur
+    public $showReturModal = false;
+    public $detailTerpilih = null;
     public $qty_retur = 1;
-    public $kondisi = 'BAGUS';
-    public $keyword_pengganti = '';
-    public $produk_pengganti_id = '';
+    public $kondisi_retur = 'BAGUS';
+    
+    // State Pencarian Barang Pengganti
+    public $search_produk_pengganti = '';
     public $produk_pengganti = null;
+    
+    // State Form Eksekusi
+    public $catatan = '';
+    public $password_admin = '';
 
-    public function cariNota()
+    public function mount()
     {
-        $this->transaksi_aktif = TransaksiPenjualan::with(['detailPenjualan.produk'])
-            ->where('kode_nota', trim($this->kode_nota))
-            ->first();
-
-        if (!$this->transaksi_aktif) {
-            $this->addError('pencarian', 'Nota tidak ditemukan!');
-            return;
-        }
-
-        // Reset state jika nota ganti
-        $this->items_retur = [];
-        $this->resetInputBaris();
+        // Default filter ke 7 hari terakhir
+        $this->filter_tanggal_mulai = Carbon::now()->subDays(7)->format('Y-m-d');
+        $this->filter_tanggal_akhir = Carbon::now()->format('Y-m-d');
     }
 
-    public function cariProdukPengganti($id)
+    // --- FUNGSI PILIH & KEMBALI NOTA ---
+    public function pilihNota($id_transaksi)
     {
-        $this->produk_pengganti = Produk::find($id);
-        $this->produk_pengganti_id = $id;
-        $this->keyword_pengganti = '';
+        $this->notaTerpilih = TransaksiPenjualan::with(['detailPenjualan.produk', 'user', 'pelanggan'])
+            ->find($id_transaksi);
     }
 
-    public function tambahItemRetur()
+    public function batalPilihNota()
     {
-        $this->validate([
-            'pilih_detail_id' => 'required',
-            'qty_retur' => 'required|numeric|min:0.01',
-            'kondisi' => 'required|in:BAGUS,RUSAK',
-            'produk_pengganti_id' => 'required',
-        ]);
-
-        $detailAwal = $this->transaksi_aktif->detailPenjualan->where('id_detail_penjualan', $this->pilih_detail_id)->first();
-        $sisaBisaRetur = $detailAwal->jumlah - $detailAwal->jumlah_diretur;
-
-        if ($this->qty_retur > $sisaBisaRetur) {
-            $this->addError('form_retur', "Qty retur melebihi batas! Maksimal: $sisaBisaRetur " . $detailAwal->satuan_saat_jual);
-            return;
-        }
-
-        $hargaLama = $detailAwal->harga_satuan * $this->qty_retur;
-        $hargaBaru = $this->produk_pengganti->harga_jual_satuan * $this->qty_retur;
-        $subtotalSelisih = $hargaBaru - $hargaLama;
-
-        $this->items_retur[] = [
-            'id_detail_penjualan' => $this->pilih_detail_id,
-            'nama_produk_lama' => $detailAwal->produk->nama_produk,
-            'id_produk_pengganti' => $this->produk_pengganti_id,
-            'nama_produk_pengganti' => $this->produk_pengganti->nama_produk,
-            'jumlah' => $this->qty_retur,
-            'kondisi_barang_dikembalikan' => $this->kondisi,
-            'selisih_biaya' => $subtotalSelisih,
-        ];
-
-        $this->resetInputBaris();
+        $this->notaTerpilih = null;
+        $this->tutupModalRetur();
     }
 
-    public function hapusItemRetur($index)
+    // --- FUNGSI MODAL RETUR ---
+    public function bukaModalRetur($id_detail)
     {
-        unset($this->items_retur[$index]);
-        $this->items_retur = array_values($this->items_retur);
-    }
-
-    private function resetInputBaris()
-    {
-        $this->pilih_detail_id = '';
+        $this->detailTerpilih = DetailPenjualan::with('produk')->find($id_detail);
+        
+        // Secara default, barang pengganti adalah barang itu sendiri (Jika pelanggan cuma mau tukar yang baru)
+        $this->produk_pengganti = $this->detailTerpilih->produk; 
+        
         $this->qty_retur = 1;
-        $this->kondisi = 'BAGUS';
-        $this->produk_pengganti_id = '';
-        $this->produk_pengganti = null;
-        $this->keyword_pengganti = '';
+        $this->kondisi_retur = 'BAGUS';
+        $this->search_produk_pengganti = '';
+        $this->catatan = '';
+        $this->password_admin = '';
+        
+        $this->showReturModal = true;
     }
 
+    public function tutupModalRetur()
+    {
+        $this->showReturModal = false;
+        $this->detailTerpilih = null;
+        $this->produk_pengganti = null;
+    }
+
+    public function pilihBarangPengganti($id_produk)
+    {
+        $this->produk_pengganti = Produk::find($id_produk);
+        $this->search_produk_pengganti = ''; // Tutup dropdown pencarian
+    }
+
+    // --- EKSEKUSI RETUR KE SERVICE ---
     public function prosesRetur(ReturnService $returnService)
     {
-        if (empty($this->items_retur)) {
-            $this->addError('sistem', 'Keranjang retur masih kosong!');
+        $sisaMaksimal = $this->detailTerpilih->jumlah - $this->detailTerpilih->jumlah_diretur;
+
+        // 1. Validasi Input
+        $this->validate([
+            'qty_retur' => "required|numeric|min:0.01|max:$sisaMaksimal",
+            'kondisi_retur' => 'required|in:BAGUS,RUSAK',
+            'catatan' => 'required|string|min:3',
+            'password_admin' => 'required',
+        ]);
+
+        if (!$this->produk_pengganti) {
+            $this->addError('search_produk_pengganti', 'Pilih barang pengganti terlebih dahulu!');
             return;
         }
 
+        // 2. Keamanan Tingkat Tinggi (Otorisasi Password)
+        if (!Hash::check($this->password_admin, Auth::user()->password)) {
+            $this->addError('password_admin', 'Password otorisasi salah!');
+            return;
+        }
+
+        // 3. Format Data untuk ReturnService (Sesuai dengan struktur Fase 5)
+        $itemsRetur = [
+            [
+                'id_detail_penjualan' => $this->detailTerpilih->id_detail_penjualan,
+                'id_produk_pengganti' => $this->produk_pengganti->id_produk,
+                'jumlah' => $this->qty_retur,
+                'kondisi_barang_dikembalikan' => $this->kondisi_retur,
+            ]
+        ];
+
         try {
-            $notaRetur = $returnService->prosesRetur(
-                $this->transaksi_aktif->id_transaksi_penjualan,
+            // Lempar ke Otak Bisnis (Service Layer)
+            $returnService->prosesRetur(
+                $this->notaTerpilih->id_transaksi_penjualan,
                 Auth::id(),
-                $this->items_retur,
+                $itemsRetur,
                 $this->catatan
             );
 
-            session()->flash('sukses', "Retur berhasil diproses! Kode Retur: " . $notaRetur->kode_retur);
+            session()->flash('sukses', 'Proses Retur Berhasil! Mutasi stok & uang telah disesuaikan.');
             
-            // Reset Total
-            $this->transaksi_aktif = null;
-            $this->kode_nota = '';
-            $this->items_retur = [];
-            $this->catatan = '';
+            // Refresh data nota agar tabel langsung berubah (Sisa barang berkurang)
+            $this->notaTerpilih->refresh(); 
+            $this->tutupModalRetur();
 
         } catch (Exception $e) {
-            $this->addError('sistem', $e->getMessage());
+            $this->addError('password_admin', $e->getMessage()); // Tampilkan error dari service
         }
     }
 
     public function render()
     {
-        $daftarPencarianPengganti = collect();
-        if (strlen($this->keyword_pengganti) >= 2) {
-            $daftarPencarianPengganti = Produk::where('status_aktif', true)
-                ->whereRaw("MATCH(index_pencarian) AGAINST(? IN BOOLEAN MODE)", [$this->keyword_pengganti . '*'])
-                ->limit(5)->get();
+        // 1. QUERY DAFTAR NOTA (Jika belum pilih nota)
+        $daftar_nota = collect();
+        if (!$this->notaTerpilih) {
+            $queryNota = TransaksiPenjualan::with(['pelanggan'])
+                ->whereBetween('tanggal_transaksi', [
+                    $this->filter_tanggal_mulai . ' 00:00:00',
+                    $this->filter_tanggal_akhir . ' 23:59:59'
+                ]);
+
+            if (!empty(trim($this->filter_keyword))) {
+                $queryNota->where(function($q) {
+                    $q->where('kode_nota', 'LIKE', '%' . $this->filter_keyword . '%')
+                      ->orWhereHas('pelanggan', function($q2) {
+                          $q2->where('nama', 'LIKE', '%' . $this->filter_keyword . '%');
+                      });
+                });
+            }
+            $daftar_nota = $queryNota->orderBy('tanggal_transaksi', 'desc')->limit(50)->get();
+        }
+
+        // 2. QUERY BARANG PENGGANTI (Pencarian Split-LIKE No Lag)
+        $hasil_pencarian_produk = collect();
+        if ($this->showReturModal && !empty(trim($this->search_produk_pengganti))) {
+            $queryProduk = Produk::where('status_aktif', true);
+            $terms = explode(' ', trim(strtolower($this->search_produk_pengganti)));
+            
+            foreach ($terms as $term) {
+                $queryProduk->where('index_pencarian', 'LIKE', '%' . $term . '%');
+            }
+            $hasil_pencarian_produk = $queryProduk->limit(10)->get();
         }
 
         return view('livewire.transaksi.retur-penjualan', [
-            'daftarPencarianPengganti' => $daftarPencarianPengganti
+            'daftar_nota' => $daftar_nota,
+            'hasil_pencarian_produk' => $hasil_pencarian_produk
         ]);
     }
 }

@@ -1,132 +1,242 @@
-<div class="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow mt-6">
-    <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">Modul Tukar Barang (Retur)</h2>
+<div>
+    <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Proses Retur Transaksi</h2>
 
-    @if(session()->has('sukses')) 
-        <div class="bg-green-100 text-green-800 p-4 rounded mb-4">{{ session('sukses') }}</div> 
+    @if (session()->has('sukses'))
+        <div class="bg-green-100 border-l-4 border-green-500 text-green-800 p-4 mb-6 rounded shadow animate-bounce">
+            <p class="font-bold">SUKSES!</p>
+            <p>{{ session('sukses') }}</p>
+        </div>
     @endif
-    @error('sistem') 
-        <div class="bg-red-100 text-red-800 p-4 rounded mb-4">{{ $message }}</div> 
-    @enderror
 
-    <!-- Langkah 1: Cari Nota -->
-    <div class="flex gap-4 mb-6">
-        <input type="text" wire:model="kode_nota" placeholder="Masukkan Kode Nota Jual... (Contoh: Nota_Jual_01-01-2024-001)" class="w-full border-gray-300 rounded p-2 border focus:ring-blue-500">
-        <button wire:click="cariNota" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold">CARI NOTA</button>
-    </div>
-    @error('pencarian') <span class="text-red-500 text-sm -mt-4 block mb-4">{{ $message }}</span> @enderror
-
-    <!-- Jika Nota Ditemukan -->
-    @if($transaksi_aktif)
-        <div class="bg-gray-50 border p-4 rounded mb-6">
-            <h3 class="font-bold text-lg mb-2">Detail Nota: {{ $transaksi_aktif->kode_nota }}</h3>
-            <p class="text-sm text-gray-600 mb-4">Tanggal: {{ $transaksi_aktif->tanggal_transaksi->format('d/m/Y H:i') }}</p>
-            
-            <!-- Form Input Retur per Baris -->
-            <div class="bg-white p-4 border rounded shadow-sm">
-                <h4 class="font-bold text-blue-800 mb-3">1. Pilih Barang yang Dikembalikan</h4>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                    
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-bold text-gray-600 mb-1">Pilih Barang dari Nota</label>
-                        <select wire:model="pilih_detail_id" class="w-full border-gray-300 rounded p-2 border text-sm">
-                            <option value="">-- Pilih Barang --</option>
-                            @foreach($transaksi_aktif->detailPenjualan as $det)
-                                @php $sisa = $det->jumlah - $det->jumlah_diretur; @endphp
-                                @if($sisa > 0)
-                                    <option value="{{ $det->id_detail_penjualan }}">
-                                        {{ $det->produk->nama_produk }} (Beli: {{ $det->jumlah }}, Sisa Bisa Diretur: {{ $sisa }})
-                                    </option>
-                                @endif
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">Qty Retur</label>
-                        <input type="number" step="0.01" wire:model="qty_retur" class="w-full border-gray-300 rounded p-2 border text-sm">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">Kondisi</label>
-                        <select wire:model="kondisi" class="w-full border-gray-300 rounded p-2 border text-sm">
-                            <option value="BAGUS">BAGUS (Masuk Gudang)</option>
-                            <option value="RUSAK">RUSAK (Dibuang)</option>
-                        </select>
-                    </div>
+    <!-- TAMPILAN 1: DAFTAR NOTA PENCARIAN (Muncul kalau belum ada nota yang dipilih) -->
+    @if(!$notaTerpilih)
+        <div class="bg-white rounded-lg shadow border-t-4 border-indigo-500 overflow-hidden mb-6">
+            <div class="p-4 bg-gray-50 flex flex-wrap gap-4 items-end border-b">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Mulai Tgl</label>
+                    <input wire:model.live="filter_tanggal_mulai" type="date" class="border border-gray-300 rounded px-3 py-2 text-sm focus:ring-indigo-500">
                 </div>
-
-                <h4 class="font-bold text-green-700 mt-6 mb-3">2. Pilih Barang Pengganti</h4>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    <div class="md:col-span-2 relative">
-                        @if(!$produk_pengganti)
-                            <input type="text" wire:model.live.debounce.300ms="keyword_pengganti" placeholder="Cari barang baru pengganti..." class="w-full border-gray-300 rounded p-2 border text-sm">
-                            @if(count($daftarPencarianPengganti) > 0)
-                                <ul class="absolute z-10 w-full bg-white border mt-1 rounded shadow-lg max-h-40 overflow-y-auto text-sm">
-                                    @foreach($daftarPencarianPengganti as $p)
-                                        <li class="p-2 hover:bg-gray-100 cursor-pointer border-b" wire:click="cariProdukPengganti({{ $p->id_produk }})">
-                                            {{ $p->nama_produk }} (Rp {{ number_format($p->harga_jual_satuan, 0, ',', '.') }})
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            @endif
-                        @else
-                            <div class="flex justify-between items-center bg-green-50 border border-green-200 p-2 rounded text-sm">
-                                <span class="font-bold text-green-800">{{ $produk_pengganti->nama_produk }}</span>
-                                <button wire:click="$set('produk_pengganti', null)" class="text-xs bg-white px-2 py-1 rounded border">Ganti</button>
-                            </div>
-                        @endif
-                    </div>
-                    
-                    <button wire:click="tambahItemRetur" class="bg-gray-800 text-white font-bold py-2 rounded shadow hover:bg-black text-sm">
-                        + TAMBAHKAN KE LIST RETUR
-                    </button>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Sampai Tgl</label>
+                    <input wire:model.live="filter_tanggal_akhir" type="date" class="border border-gray-300 rounded px-3 py-2 text-sm focus:ring-indigo-500">
                 </div>
-                @error('form_retur') <span class="text-red-500 text-xs mt-2 block">{{ $message }}</span> @enderror
+                <div class="flex-1">
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cari Nota / Nama Pelanggan</label>
+                    <input wire:model.live.debounce.300ms="filter_keyword" type="text" placeholder="Ketik kata kunci..." class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full leading-normal text-left">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 text-xs uppercase tracking-wider border-b">
+                            <th class="px-5 py-3 font-bold">Tgl Transaksi</th>
+                            <th class="px-5 py-3 font-bold">Kode Nota</th>
+                            <th class="px-5 py-3 font-bold">Pelanggan</th>
+                            <th class="px-5 py-3 font-bold text-right">Total Transaksi</th>
+                            <th class="px-5 py-3 font-bold text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($daftar_nota as $nota)
+                            <tr class="border-b hover:bg-indigo-50">
+                                <td class="px-5 py-3 text-sm text-gray-700">{{ $nota->tanggal_transaksi->format('d M Y, H:i') }}</td>
+                                <td class="px-5 py-3 text-sm font-bold text-indigo-700">{{ $nota->kode_nota }}</td>
+                                <td class="px-5 py-3 text-sm text-gray-800">{{ $nota->pelanggan->nama ?? 'Umum' }}</td>
+                                <td class="px-5 py-3 text-sm text-right font-bold text-gray-600">Rp {{ number_format($nota->total_harga, 0, ',', '.') }}</td>
+                                <td class="px-5 py-3 text-sm text-center">
+                                    <button wire:click="pilihNota({{ $nota->id_transaksi_penjualan }})" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-4 rounded shadow transition-colors">
+                                        Pilih Nota
+                                    </button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="px-5 py-8 text-center text-gray-500 font-bold">Tidak ada nota ditemukan di tanggal tersebut.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
+    @endif
 
-        <!-- Keranjang Retur & Kalkulasi Biaya -->
-        @if(count($items_retur) > 0)
-            <div class="border rounded-lg p-4 mb-6">
-                <h3 class="font-bold text-lg mb-4">Daftar Barang yang Ditukar</h3>
-                <ul class="space-y-3 mb-4">
-                    @foreach($items_retur as $index => $item)
-                        <li class="flex justify-between items-center bg-gray-50 p-3 rounded border">
-                            <div>
-                                <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded font-bold">KEMBALI: {{ $item['jumlah'] }}x {{ $item['nama_produk_lama'] }} ({{ $item['kondisi_barang_dikembalikan'] }})</span>
-                                <span class="mx-2 text-gray-400">➡️</span>
-                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded font-bold">GANTI: {{ $item['jumlah'] }}x {{ $item['nama_produk_pengganti'] }}</span>
-                            </div>
-                            <div class="flex items-center gap-4">
-                                <span class="font-bold {{ $item['selisih_biaya'] > 0 ? 'text-blue-600' : ($item['selisih_biaya'] < 0 ? 'text-red-600' : 'text-gray-600') }}">
-                                    @if($item['selisih_biaya'] > 0) Pelanggan Nambah: @elseif($item['selisih_biaya'] < 0) Toko Mengembalikan: @else Pas / Tukar Guling @endif
-                                    Rp {{ number_format(abs($item['selisih_biaya']), 0, ',', '.') }}
-                                </span>
-                                <button wire:click="hapusItemRetur({{ $index }})" class="text-red-500 font-bold hover:underline">Hapus</button>
-                            </div>
-                        </li>
-                    @endforeach
-                </ul>
+    <!-- TAMPILAN 2: DETAIL NOTA YANG DIPILIH -->
+    @if($notaTerpilih)
+        <div class="mb-4">
+            <button wire:click="batalPilihNota" class="text-indigo-600 font-bold hover:text-indigo-800 bg-white px-4 py-2 rounded-lg shadow-sm border">&larr; Kembali ke Daftar Nota</button>
+        </div>
 
-                @php $totalSelisih = collect($items_retur)->sum('selisih_biaya'); @endphp
-                <div class="flex justify-between items-center border-t pt-4">
-                    <div class="w-1/2">
-                        <label class="block text-xs font-bold text-gray-600 mb-1">Catatan Retur (Opsional)</label>
-                        <input type="text" wire:model="catatan" class="w-full border-gray-300 rounded p-2 border text-sm" placeholder="Alasan retur...">
-                    </div>
-                    <div class="text-right">
-                        <p class="text-sm text-gray-500">Total Selisih Biaya Retur:</p>
-                        <p class="text-2xl font-bold {{ $totalSelisih > 0 ? 'text-blue-600' : ($totalSelisih < 0 ? 'text-red-600' : 'text-gray-800') }}">
-                            @if($totalSelisih > 0) Pelanggan Nombok @elseif($totalSelisih < 0) Toko Rugi/Kembali Uang @else Impas @endif 
-                            Rp {{ number_format(abs($totalSelisih), 0, ',', '.') }}
-                        </p>
-                    </div>
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="bg-gray-800 text-white px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center">
+                <div>
+                    <h3 class="text-xl font-bold">Detail Nota: {{ $notaTerpilih->kode_nota }}</h3>
+                    <p class="text-sm text-gray-300">Tgl: {{ $notaTerpilih->tanggal_transaksi->format('d M Y, H:i') }} | Kasir: {{ $notaTerpilih->user->name ?? 'Admin' }}</p>
+                </div>
+                <div class="text-left md:text-right mt-2 md:mt-0 bg-gray-700 px-4 py-2 rounded-lg">
+                    <p class="text-xs text-gray-400 uppercase tracking-wider font-bold">Pelanggan</p>
+                    <p class="text-lg font-bold">{{ $notaTerpilih->pelanggan->nama ?? 'Pelanggan Umum Walk-in' }}</p>
                 </div>
             </div>
 
-            <button wire:click="prosesRetur" wire:confirm="Pastikan fisik barang dan uang selisih sudah diterima/dikembalikan. Proses sekarang?" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg shadow text-lg">
-                KONFIRMASI & PROSES RETUR
-            </button>
-        @endif
+            <div class="overflow-x-auto">
+                <table class="min-w-full leading-normal text-left">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 text-xs uppercase tracking-wider border-b">
+                            <th class="px-5 py-3 font-bold">Nama Barang</th>
+                            <th class="px-5 py-3 font-bold text-center">Beli</th>
+                            <th class="px-5 py-3 font-bold text-center text-red-600">Diretur</th>
+                            <th class="px-5 py-3 font-bold text-center text-green-600">Sisa</th>
+                            <th class="px-5 py-3 font-bold text-right">Harga Satuan</th>
+                            <th class="px-5 py-3 font-bold text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($notaTerpilih->detailPenjualan as $detail)
+                            @php
+                                $sisaBisaDiretur = $detail->jumlah - $detail->jumlah_diretur;
+                            @endphp
+                            <tr class="border-b hover:bg-gray-50 {{ $sisaBisaDiretur <= 0 ? 'bg-gray-50 opacity-50' : '' }}">
+                                <td class="px-5 py-4 text-sm font-bold text-gray-800">
+                                    {{ $detail->produk->nama_produk }}
+                                </td>
+                                <td class="px-5 py-4 text-sm text-center font-bold text-gray-600">
+                                    {{ fmod($detail->jumlah, 1) == 0 ? (int)$detail->jumlah : $detail->jumlah }}
+                                </td>
+                                <td class="px-5 py-4 text-sm text-center font-bold text-red-600">
+                                    {{ fmod($detail->jumlah_diretur, 1) == 0 ? (int)$detail->jumlah_diretur : $detail->jumlah_diretur }}
+                                </td>
+                                <td class="px-5 py-4 text-sm text-center font-bold text-green-600">
+                                    {{ fmod($sisaBisaDiretur, 1) == 0 ? (int)$sisaBisaDiretur : $sisaBisaDiretur }}
+                                </td>
+                                <td class="px-5 py-4 text-sm text-right font-semibold">Rp {{ number_format($detail->harga_satuan, 0, ',', '.') }}</td>
+                                <td class="px-5 py-4 text-sm text-center">
+                                    @if($sisaBisaDiretur > 0)
+                                        <button wire:click="bukaModalRetur({{ $detail->id_detail_penjualan }})" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1.5 px-4 rounded-lg shadow transition">
+                                            &#8644; Proses Retur
+                                        </button>
+                                    @else
+                                        <span class="text-xs font-bold text-gray-400 bg-gray-200 px-2 py-1 rounded">Habis Diretur</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
+
+    <!-- MODAL PROSES RETUR YANG DIPERBARUI (Dengan Live Search Barang) -->
+    @if($showReturModal && $detailTerpilih && $produk_pengganti)
+        @php
+            $sisaMaksimal = $detailTerpilih->jumlah - $detailTerpilih->jumlah_diretur;
+            $selisihSatuan = $produk_pengganti->harga_jual_satuan - $detailTerpilih->harga_satuan;
+            $totalSelisih = $selisihSatuan * (float)($qty_retur ?: 0);
+        @endphp
+        
+        <div class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl flex flex-col md:flex-row overflow-hidden border-t-4 border-yellow-500 relative">
+                
+                <!-- Tombol Close Modal (X) -->
+                <button wire:click="tutupModalRetur" class="absolute top-2 right-4 text-gray-400 hover:text-red-500 text-2xl font-bold">&times;</button>
+
+                <!-- KIRI: INFORMASI BARANG LAMA -->
+                <div class="w-full md:w-1/2 bg-gray-50 p-6 border-r border-gray-200">
+                    <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-4 border-b border-gray-200 pb-2">Barang Yang Dikembalikan Pelanggan</h3>
+                    
+                    <div class="mb-6 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <p class="text-xl font-bold text-gray-800 leading-tight">{{ $detailTerpilih->produk->nama_produk }}</p>
+                        <p class="text-sm text-gray-500 mt-1 font-semibold">Harga di Nota: <span class="text-blue-600">Rp {{ number_format($detailTerpilih->harga_satuan, 0, ',', '.') }}</span></p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Jumlah Diretur</label>
+                            <input wire:model.live="qty_retur" type="number" min="0.01" max="{{ $sisaMaksimal }}" step="0.01" class="w-full border-gray-300 rounded-lg px-3 py-2 bg-white font-bold focus:ring-yellow-500 text-lg">
+                            <p class="text-[11px] text-red-500 mt-1 font-bold">Batas Maksimal: {{ fmod($sisaMaksimal, 1) == 0 ? (int)$sisaMaksimal : $sisaMaksimal }}</p>
+                            @error('qty_retur') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Kondisi Fisik Barang</label>
+                            <select wire:model="kondisi_retur" class="w-full border-gray-300 rounded-lg px-3 py-2 bg-white font-bold focus:ring-yellow-500">
+                                <option value="BAGUS" class="text-green-600">BAGUS (Kembali Gudang)</option>
+                                <option value="RUSAK" class="text-red-600">RUSAK (Dibuang/Cacat)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KANAN: BARANG PENGGANTI & UANG -->
+                <div class="w-full md:w-1/2 p-6 flex flex-col justify-between bg-white">
+                    <div>
+                        <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-4 border-b border-gray-200 pb-2">Barang Pengganti (Baru)</h3>
+                        
+                        <!-- LIVE SEARCH BARANG PENGGANTI -->
+                        <div class="mb-5 relative">
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Ganti dengan barang lain? (Ketik untuk mencari)</label>
+                            <input wire:model.live.debounce.300ms="search_produk_pengganti" type="text" placeholder="🔍 Ketik SKU, Nama, atau Merk Barang..." class="w-full border border-blue-300 rounded-lg px-3 py-2.5 text-sm focus:ring-blue-500 bg-blue-50 shadow-inner">
+                            
+                            <!-- Dropdown Hasil Pencarian -->
+                            @if(count($hasil_pencarian_produk) > 0)
+                                <div class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                                    @foreach($hasil_pencarian_produk as $hasil)
+                                        <div wire:click="pilihBarangPengganti({{ $hasil->id_produk }})" class="p-3 border-b cursor-pointer hover:bg-blue-100 flex justify-between items-center transition">
+                                            <div>
+                                                <p class="text-sm font-bold text-gray-800">{{ $hasil->nama_produk }}</p>
+                                                <p class="text-xs text-green-700 font-bold">Rp {{ number_format($hasil->harga_jual_satuan, 0, ',', '.') }}</p>
+                                            </div>
+                                            <span class="text-xs font-bold px-2 py-1 rounded {{ $hasil->stok_saat_ini > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">Sisa: {{ $hasil->stok_display }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+
+                        <!-- Info Barang Pengganti Terpilih -->
+                        <div class="bg-gray-100 border border-gray-300 p-4 rounded-lg mb-5 flex justify-between items-center">
+                            <div>
+                                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Akan Diberikan ke Pelanggan:</p>
+                                <p class="text-lg font-bold text-blue-700 leading-tight">{{ $produk_pengganti->nama_produk }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xl font-black text-gray-800">Rp {{ number_format($produk_pengganti->harga_jual_satuan, 0, ',', '.') }}</p>
+                                <span class="text-[10px] text-gray-500 font-bold uppercase">Harga Satuan</span>
+                            </div>
+                        </div>
+
+                        <!-- PERHITUNGAN UANG OTOMATIS -->
+                        <div class="mb-5 p-4 rounded-lg shadow-inner {{ $totalSelisih > 0 ? 'bg-orange-50 border-2 border-orange-300' : ($totalSelisih < 0 ? 'bg-green-50 border-2 border-green-300' : 'bg-gray-50 border-2 border-gray-300') }}">
+                            <p class="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">Status Keuangan (Selisih Biaya)</p>
+                            @if($totalSelisih > 0)
+                                <p class="text-xl font-black text-orange-700">Pelanggan Nambah: Rp {{ number_format(abs($totalSelisih), 0, ',', '.') }}</p>
+                            @elseif($totalSelisih < 0)
+                                <p class="text-xl font-black text-green-700">Toko Kembalikan: Rp {{ number_format(abs($totalSelisih), 0, ',', '.') }}</p>
+                            @else
+                                <p class="text-xl font-black text-gray-700">Tukar Guling (Rp 0 / Pas)</p>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- EKSEKUSI & PASSWORD -->
+                    <form wire:submit="prosesRetur" class="mt-auto border-t border-gray-200 pt-4">
+                        <div class="mb-3">
+                            <input wire:model="catatan" type="text" placeholder="Catatan Wajib (Cth: Speaker sobek minta tukar)" class="w-full border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-gray-50 focus:ring-yellow-500" required>
+                        </div>
+                        <div class="mb-4">
+                            <input wire:model="password_admin" type="password" placeholder="Otorisasi: Masukkan Password Admin" class="w-full border-red-300 rounded-lg px-3 py-2.5 text-sm focus:ring-red-500" required>
+                            @error('password_admin') <span class="text-red-600 text-xs font-bold block mt-1">{{ $message }}</span> @enderror
+                        </div>
+                        <div class="flex justify-end gap-3">
+                            <button type="button" wire:click="tutupModalRetur" class="bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 font-bold py-2.5 px-6 rounded-lg transition">Batal</button>
+                            <button type="submit" wire:confirm="Pastikan fisik barang lama dan uang selisih sudah diterima/dikembalikan. Lanjutkan proses?" class="bg-yellow-500 hover:bg-yellow-600 text-white font-black py-2.5 px-6 rounded-lg shadow-lg transition">
+                                PROSES RETUR SEKARANG
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
     @endif
 </div>

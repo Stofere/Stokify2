@@ -7,10 +7,13 @@ use Livewire\WithPagination;
 use App\Models\Produk;
 use App\Models\Kategori;
 use App\Models\RiwayatStok;
+use App\Models\TransaksiPenjualan;
+use App\Models\TransaksiRetur;
 use App\Services\StockService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Carbon\Carbon;
 
 class ProdukIndex extends Component
 {
@@ -36,12 +39,21 @@ class ProdukIndex extends Component
     // --- STATE UNTUK MODAL STOK (ADJUST & RIWAYAT) ---
     public $stok_modal_open = false;
     public $produk_stok_aktif = null;
-    public $riwayat_stok = [];
+    
+    // Filter Riwayat Stok
+    public $riwayat_tgl_mulai;
+    public $riwayat_tgl_akhir;
+
     // Form Adjust Stok
     public $tipe_penyesuaian = 'KOREKSI_MINUS';
     public $jumlah_adjust = 0;
     public $keterangan_adjust = '';
     public $password_admin = '';
+
+    // --- STATE UNTUK MODAL DETAIL NOTA (KLIK DARI RIWAYAT) ---
+    public $modal_detail_nota_open = false;
+    public $detail_nota_aktif = null;
+    public $tipe_nota_aktif = ''; // 'POS' atau 'RETUR'
 
     public function mount()
     {
@@ -58,7 +70,7 @@ class ProdukIndex extends Component
             if ($kategori) {
                 $this->atributDinamis = $kategori->atribut;
                 foreach ($this->atributDinamis as $attr) {
-                    $this->metadata_input[$attr->nama_atribut] = ''; // Inisialisasi awal
+                    $this->metadata_input[$attr->nama_atribut] = ''; 
                 }
             }
         }
@@ -75,7 +87,6 @@ class ProdukIndex extends Component
             'lacak_stok' => 'boolean',
         ]);
 
-        // FIX: Atribut dinamis dikumpulkan, yang kosong (Null) diabaikan/dibuang. (Tidak lagi required)
         $metadataFinal = [];
         foreach ($this->atributDinamis as $attr) {
             if (!empty($this->metadata_input[$attr->nama_atribut])) {
@@ -148,19 +159,24 @@ class ProdukIndex extends Component
 
     public function updatingKeyword()
     {
-        $this->resetPage();
+        $this->resetPage(); // Reset pagination produk utama
     }
 
     // =========================================================================
-    // FITUR BARU: MANAJEMEN STOK (RIWAYAT & ADJUST) DI DALAM KATALOG PRODUK
+    // FITUR MODAL STOK (ADJUST & RIWAYAT)
     // =========================================================================
 
     public function bukaModalStok($id_produk)
     {
         $this->produk_stok_aktif = Produk::find($id_produk);
-        $this->loadRiwayatStok();
+        
+        // Set default filter tanggal ke 30 hari terakhir
+        $this->riwayat_tgl_mulai = Carbon::now()->subDays(30)->format('Y-m-d');
+        $this->riwayat_tgl_akhir = Carbon::now()->format('Y-m-d');
+        
         $this->stok_modal_open = true;
         $this->resetFormAdjust();
+        $this->resetPage('riwayatPage'); // Reset pagination khusus riwayat
     }
 
     public function tutupModalStok()
@@ -170,16 +186,9 @@ class ProdukIndex extends Component
         $this->resetFormAdjust();
     }
 
-    private function loadRiwayatStok()
-    {
-        if ($this->produk_stok_aktif) {
-            $this->riwayat_stok = RiwayatStok::with(['user', 'transaksiPenjualan', 'transaksiRetur'])
-                ->where('id_produk', $this->produk_stok_aktif->id_produk)
-                ->orderBy('created_at', 'desc')
-                ->limit(50) // Tampilkan 50 riwayat terakhir agar tidak lemot
-                ->get();
-        }
-    }
+    // Reset pagination riwayat ketika tanggal diubah
+    public function updatedRiwayatTglMulai() { $this->resetPage('riwayatPage'); }
+    public function updatedRiwayatTglAkhir() { $this->resetPage('riwayatPage'); }
 
     private function resetFormAdjust()
     {
@@ -202,7 +211,6 @@ class ProdukIndex extends Component
         }
 
         try {
-            // Panggil StockService (Core Business Logic yang kita buat di Fase 5)
             $stockService->adjustStokManual(
                 $this->produk_stok_aktif->id_produk,
                 Auth::id(),
@@ -212,21 +220,46 @@ class ProdukIndex extends Component
             );
 
             session()->flash('sukses_stok', "Stok fisik barang berhasil diperbarui.");
-            
-            // Refresh data produk dan riwayat stok di modal
             $this->produk_stok_aktif->refresh();
-            $this->loadRiwayatStok();
             $this->resetFormAdjust();
+            $this->resetPage('riwayatPage'); // Kembali ke halaman 1 riwayat setelah adjust
 
         } catch (Exception $e) {
             $this->addError('sistem_stok', $e->getMessage());
         }
     }
 
+    // =========================================================================
+    // FITUR LIHAT DETAIL NOTA DARI RIWAYAT
+    // =========================================================================
+    public function lihatDetailNota($id_transaksi, $tipe)
+    {
+        $this->tipe_nota_aktif = $tipe;
+        
+        if ($tipe === 'POS') {
+            $this->detail_nota_aktif = TransaksiPenjualan::with(['detailPenjualan.produk', 'user', 'pelanggan', 'marketing'])
+                ->find($id_transaksi);
+        } elseif ($tipe === 'RETUR') {
+            $this->detail_nota_aktif = TransaksiRetur::with(['detailRetur.produkDikembalikan', 'detailRetur.produkPengganti', 'user', 'transaksiPenjualan'])
+                ->find($id_transaksi);
+        }
+
+        $this->modal_detail_nota_open = true;
+    }
+
+    public function tutupDetailNota()
+    {
+        $this->modal_detail_nota_open = false;
+        $this->detail_nota_aktif = null;
+    }
+
+    // =========================================================================
+    // RENDER METODE
+    // =========================================================================
     public function render()
     {
+        // 1. Query Produk Utama
         $query = Produk::with('kategori')->orderBy('status_aktif', 'desc')->latest();
-        
         if (!empty(trim($this->keyword))) {
             $terms = explode(' ', trim(strtolower($this->keyword)));
             foreach ($terms as $term) {
@@ -234,8 +267,25 @@ class ProdukIndex extends Component
             }
         }
 
+        // 2. Query Riwayat Stok (Hanya berjalan jika modal stok terbuka)
+        $riwayat_stok_paginated = null;
+        if ($this->stok_modal_open && $this->produk_stok_aktif) {
+            $queryRiwayat = RiwayatStok::with(['user', 'transaksiPenjualan.pelanggan', 'transaksiPenjualan.marketing', 'transaksiRetur'])
+                ->where('id_produk', $this->produk_stok_aktif->id_produk);
+
+            if ($this->riwayat_tgl_mulai && $this->riwayat_tgl_akhir) {
+                $queryRiwayat->whereBetween('created_at', [
+                    $this->riwayat_tgl_mulai . ' 00:00:00',
+                    $this->riwayat_tgl_akhir . ' 23:59:59'
+                ]);
+            }
+            // Batasi 15 per halaman & beri nama page khusus (riwayatPage) agar tidak bentrok dengan pagination produk
+            $riwayat_stok_paginated = $queryRiwayat->orderBy('id_riwayat', 'desc')->paginate(15, ['*'], 'riwayatPage');
+        }
+
         return view('livewire.master.produk-index', [
-            'daftarProduk' => $query->paginate(15)
+            'daftarProduk' => $query->paginate(15),
+            'riwayatStok' => $riwayat_stok_paginated
         ]);
     }
 }
