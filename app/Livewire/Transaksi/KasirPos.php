@@ -10,6 +10,8 @@ use App\Services\TransactionService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+
 
 class KasirPos extends Component
 {
@@ -163,46 +165,56 @@ class KasirPos extends Component
 
     public function prosesPembayaranFinal(TransactionService $transactionService)
     {
-        // PENCEGAHAN SPAM: Gunakan DB Transaction agar pembuatan Pelanggan & Nota berjalan dalam 1 antrean aman
-        DB::beginTransaction();
-        try {
-            $id_pelanggan_final = $this->id_pelanggan;
+        $lock = Cache::lock('proses-bayar:' . Auth::id(), 10);
 
-            // Jika pelanggan baru, buat datanya di database SEKARANG
-            if ($this->is_pelanggan_baru) {
-                $newPlg = Pelanggan::create([
-                    'nama' => $this->pelanggan_baru_nama,
-                    'telepon' => $this->pelanggan_baru_telepon,
-                    'alamat' => $this->pelanggan_baru_alamat,
-                    'aktif' => true
-                ]);
-                $id_pelanggan_final = $newPlg->id_pelanggan;
+        if ($lock->get()) {
+            try {
+                // PENCEGAHAN SPAM: Gunakan DB Transaction agar pembuatan Pelanggan & Nota berjalan dalam 1 antrean aman
+                DB::beginTransaction();
+                try {
+                    $id_pelanggan_final = $this->id_pelanggan;
+
+                    // Jika pelanggan baru, buat datanya di database SEKARANG
+                    if ($this->is_pelanggan_baru) {
+                        $newPlg = Pelanggan::create([
+                            'nama' => $this->pelanggan_baru_nama,
+                            'telepon' => $this->pelanggan_baru_telepon,
+                            'alamat' => $this->pelanggan_baru_alamat,
+                            'aktif' => true
+                        ]);
+                        $id_pelanggan_final = $newPlg->id_pelanggan;
+                    }
+
+                    $dataNota = [
+                        'id_pelanggan' => $id_pelanggan_final,
+                        'id_marketing' => $this->id_marketing,
+                        'catatan' => $this->catatan,
+                    ];
+
+                    // Lempar ke otak bisnis untuk diproses
+                    $nota = $transactionService->createPenjualan(Auth::id(), $dataNota, $this->keranjang);
+                    
+                    DB::commit(); // Konfirmasi semua perubahan database (Pelanggan + Transaksi)
+
+                    session()->flash('sukses', "Transaksi berhasil! Nomor Nota: " . $nota->kode_nota);
+                    
+                    // Reset seluruh State
+                    $this->reset([
+                        'keranjang', 'total_belanja', 'catatan', 'keyword', 'showConfirmModal',
+                        'id_pelanggan', 'pelangganTerpilihNama', 'searchPelanggan', 'is_pelanggan_baru', 'pelanggan_baru_nama', 'pelanggan_baru_telepon', 'pelanggan_baru_alamat',
+                        'id_marketing', 'marketingTerpilihNama', 'searchMarketing'
+                    ]);
+
+                } catch (Exception $e) {
+                    DB::rollBack(); // Batalkan pembuatan pelanggan & nota jika ada yang error (misal stok tiba-tiba habis)
+                    $this->showConfirmModal = false;
+                    $this->addError('checkout', $e->getMessage());
+                }
+            } finally {
+                $lock->release();
             }
-
-            $dataNota = [
-                'id_pelanggan' => $id_pelanggan_final,
-                'id_marketing' => $this->id_marketing,
-                'catatan' => $this->catatan,
-            ];
-
-            // Lempar ke otak bisnis untuk diproses
-            $nota = $transactionService->createPenjualan(Auth::id(), $dataNota, $this->keranjang);
-            
-            DB::commit(); // Konfirmasi semua perubahan database (Pelanggan + Transaksi)
-
-            session()->flash('sukses', "Transaksi berhasil! Nomor Nota: " . $nota->kode_nota);
-            
-            // Reset seluruh State
-            $this->reset([
-                'keranjang', 'total_belanja', 'catatan', 'keyword', 'showConfirmModal',
-                'id_pelanggan', 'pelangganTerpilihNama', 'searchPelanggan', 'is_pelanggan_baru', 'pelanggan_baru_nama', 'pelanggan_baru_telepon', 'pelanggan_baru_alamat',
-                'id_marketing', 'marketingTerpilihNama', 'searchMarketing'
-            ]);
-
-        } catch (Exception $e) {
-            DB::rollBack(); // Batalkan pembuatan pelanggan & nota jika ada yang error (misal stok tiba-tiba habis)
-            $this->showConfirmModal = false;
-            $this->addError('checkout', $e->getMessage());
+        } else {
+            session()->flash('error', 'Transaksi sebelumnya masih diproses. Harap tunggu sebentar.');
         }
     }
 

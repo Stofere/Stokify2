@@ -11,18 +11,26 @@
 
     @php
         $hour = \Carbon\Carbon::now('Asia/Jakarta')->hour;
+
         if ($hour >= 5 && $hour < 12) {
             $greeting = 'Pagi';
-            $subText = 'Sudahkah kamu menginput penjualan hari ini?';
-        } elseif ($hour >= 12 && $hour < 15) {
+            $mainText = 'Sudahkah kamu menginput penjualan hari ini?';
+            $frierenJoke = 'Karena Pahlawan Himmel pasti udah ngegas dari subuh buat farming target harian~ 🌅☕';
+        } 
+        elseif ($hour >= 12 && $hour < 15) {
             $greeting = 'Siang';
-            $subText = 'Semangat terus ya, Master! Sudah makan siang?';
-        } elseif ($hour >= 15 && $hour < 18) {
+            $mainText = 'Semangat terus ya, Master! Sudah makan siang?';
+            $frierenJoke = 'Karena bahkan Himmel butuh recharge dulu biar ga burnout grinding sales~ 🍱✨';
+        } 
+        elseif ($hour >= 15 && $hour < 18) {
             $greeting = 'Sore';
-            $subText = 'Sudahkah kamu menginput penjualan hari ini?';
-        } else {
+            $mainText = 'Sudahkah kamu menginput penjualan hari ini?';
+            $frierenJoke = 'Karena di sore hari Himmel malah makin ganas farming, jangan kalah semangatnya ya~ 🔥';
+        } 
+        else {
             $greeting = 'Malam';
-            $subText = 'Jangan lembur terlalu lama ya~ Istirahat yang cukup!';
+            $mainText = 'Jangan lembur terlalu lama ya~ Istirahat yang cukup!';
+            $frierenJoke = 'Karena Pahlawan Himmel juga tau kapan harus stop farming dan tidur, balance life dulu dong~ 🌙😴';
         }
     @endphp
 
@@ -44,8 +52,8 @@
                     🌿 Selamat {{ $greeting }}, {{ Auth::user()->name ?? 'Master' }}!
                 </h1>
                 <p class="text-slate-500 mt-3 text-sm leading-relaxed max-w-xl">
-                    {!! $subText !!}<br>
-                    <span class="italic text-sage">Karena... Pahlawan Himmel pasti akan melakukannya dengan cepat dan teliti~ ☕</span>
+                    {!! $mainText !!}<br>
+                    <span class="italic text-sage">{{ $frierenJoke }}</span>
                 </p>
                 <div class="mt-5">
                     <a href="/pos" class="inline-flex items-center gap-2 bg-gradient-to-r from-sage-dark to-sage text-white font-bold py-2.5 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 text-sm">

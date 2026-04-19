@@ -8,11 +8,15 @@ use App\Livewire\Dashboard;
 use App\Livewire\Transaksi\KasirPos;
 use App\Livewire\Transaksi\ReturPenjualan;
 use App\Livewire\Transaksi\RiwayatTransaksi;
+use App\Livewire\Laporan\Penjualan;
+use App\Livewire\Laporan\KatalogProduk;
+
 use App\Livewire\Master\PelangganIndex;
 use App\Livewire\Master\MarketingIndex;
 use App\Livewire\Master\ProdukIndex;
 use App\Livewire\Master\KategoriIndex;
 use App\Livewire\Master\AtributIndex;  
+
 
 // Route Authentication (Guest)
 Route::middleware(['guest'])->group(function () {
@@ -28,6 +32,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/pos', KasirPos::class)->name('pos');
     Route::get('/retur', ReturPenjualan::class)->name('retur');
     Route::get('/transaksi/riwayat', RiwayatTransaksi::class)->name('transaksi.riwayat');
+
+    // Laporan
+    Route::get('/laporan/penjualan', Penjualan::class)->name('laporan.penjualan');
+    Route::get('/laporan/katalog', KatalogProduk::class)->name('laporan.katalog');
+
     
     // Master Data
     Route::get('/master/pelanggan', PelangganIndex::class)->name('master.pelanggan');

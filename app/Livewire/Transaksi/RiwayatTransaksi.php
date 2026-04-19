@@ -39,7 +39,6 @@ class RiwayatTransaksi extends Component
     public function updatedTglMulai() { $this->resetPage(); }
     public function updatedTglAkhir() { $this->resetPage(); }
 
-    // GANTI FUNGSI lihatDetail() MENJADI SEPERTI INI:
     public function lihatDetail($id, $tipe_paksa = null)
     {
         // Jika dari klik tombol "Lihat Nota Retur" di dalam Nota POS, tipe_paksa akan terisi 'RETUR'

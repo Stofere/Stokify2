@@ -71,7 +71,12 @@ class ProdukIndex extends Component
             if ($kategori) {
                 $this->atributDinamis = $kategori->atribut;
                 foreach ($this->atributDinamis as $attr) {
-                    $this->metadata_input[$attr->nama_atribut] = ''; 
+                    // FIX BUG: Jika atribut adalah Tekstur, set default sebagai Array [] agar checkbox berfungsi
+                    if ($attr->nama_atribut === 'Tekstur') {
+                        $this->metadata_input[$attr->nama_atribut] = [];
+                    } else {
+                        $this->metadata_input[$attr->nama_atribut] = ''; 
+                    }
                 }
             }
         }

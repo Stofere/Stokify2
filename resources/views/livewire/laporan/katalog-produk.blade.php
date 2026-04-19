@@ -1,0 +1,74 @@
+<div class="p-6 max-w-7xl mx-auto space-y-6">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-black text-gray-800">Laporan Katalog & Stok</h2>
+            <p class="text-sm text-gray-500">Lihat dan cetak ketersediaan barang di gudang berdasarkan Kategori.</p>
+        </div>
+        <div class="flex items-center gap-3 w-full md:w-auto">
+            <select wire:model.live="filterKategori" class="w-full md:w-auto border-gray-300 rounded-lg p-2.5 text-sm bg-white focus:ring-blue-500">
+                <option value="">-- Semua Kategori --</option>
+                @foreach($semuaKategori as $kat)
+                    <option value="{{ $kat->id_kategori }}">{{ $kat->nama_kategori }}</option>
+                @endforeach
+            </select>
+            <button wire:click="cetakPdf" wire:loading.attr="disabled" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg font-bold shadow transition flex items-center gap-2 shrink-0">
+                <span wire:loading.remove>📄 Cetak PDF</span>
+                <span wire:loading>Memproses...</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <table class="w-full text-left text-sm border-collapse">
+            <thead class="bg-gray-800 text-white border-b border-gray-200 uppercase tracking-wider text-[11px]">
+                <tr>
+                    <th class="p-4 font-bold w-12 text-center">No</th>
+                    <th class="p-4 font-bold w-32">Kode / SKU</th>
+                    <th class="p-4 font-bold">Nama Barang & Spesifikasi</th>
+                    <th class="p-4 font-bold text-center w-32">Stok Sisa</th>
+                    <th class="p-4 font-bold w-48">Lokasi</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                @forelse($groupedProduk as $namaKategori => $produks)
+                    
+                    {{-- HEADER GRUP KATEGORI --}}
+                    <tr class="bg-blue-50">
+                        <td colspan="5" class="p-3 font-black text-blue-800 text-sm tracking-wide uppercase border-y border-blue-200">
+                            🏷️ KATEGORI: {{ $namaKategori }}
+                        </td>
+                    </tr>
+                    
+                    {{-- LOOPING PRODUK DI DALAM KATEGORI TERSEBUT --}}
+                    @php $nomor = 1; @endphp
+                    @foreach($produks as $prod)
+                        <tr class="hover:bg-gray-50">
+                            <td class="p-4 text-center font-bold text-gray-400">{{ $nomor++ }}.</td>
+                            <td class="p-4 font-mono font-bold text-gray-600">{{ $prod->kode_barang }}</td>
+                            <td class="p-4">
+                                <span class="font-bold text-gray-800">{{ $prod->nama_produk }}</span>
+                                @if($prod->metadata)
+                                    <div class="text-[10px] text-gray-500 mt-0.5">
+                                        @foreach($prod->metadata as $key => $val) [{{ $key }}: {{ is_array($val) ? implode(', ', $val) : $val }}] @endforeach
+                                    </div>
+                                @endif
+                            </td>
+                            <td class="p-4 text-center">
+                                @if($prod->lacak_stok)
+                                    <span class="font-black text-base {{ $prod->stok_saat_ini <= 0 ? 'text-red-600' : 'text-green-700' }}">{{ $prod->stok_display }}</span>
+                                    <span class="text-xs text-gray-500">{{ $prod->satuan }}</span>
+                                @else
+                                    <span class="text-xs text-gray-400 font-bold">Unlimited</span>
+                                @endif
+                            </td>
+                            <td class="p-4 text-gray-600 font-semibold">{{ $prod->lokasi ?? '-' }}</td>
+                        </tr>
+                    @endforeach
+
+                @empty
+                    <tr><td colspan="5" class="p-10 text-center text-gray-500 font-bold">Tidak ada barang di kategori ini.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>

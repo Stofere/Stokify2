@@ -85,6 +85,8 @@
                     ['label' => 'Retur Barang', 'icon' => 'swap_horiz', 'href' => '/retur', 'match' => 'retur'],
                     ['label' => 'Riwayat Transaksi', 'icon' => 'receipt_long', 'href' => '/transaksi/riwayat', 'match' => 'transaksi'],
                     ['label' => '', 'divider' => true, 'text' => 'Master Data'],
+                    ['label' => 'Laporan Penjualan', 'icon' => 'receipt_long', 'href' => '/laporan/penjualan', 'match' => 'laporan/penjualan'],
+                    ['label' => 'Laporan Katalog', 'icon' => 'receipt_long', 'href' => '/laporan/katalog', 'match' => 'laporan/katalog'],
                     ['label' => 'Katalog Produk', 'icon' => 'inventory_2', 'href' => '/master/produk', 'match' => 'master/produk'],
                     ['label' => 'Kategori', 'icon' => 'category', 'href' => '/master/kategori', 'match' => 'master/kategori'],
                     ['label' => 'Atribut', 'icon' => 'tune', 'href' => '/master/atribut', 'match' => 'master/atribut'],
