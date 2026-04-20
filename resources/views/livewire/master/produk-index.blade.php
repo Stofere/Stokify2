@@ -491,35 +491,36 @@
                                         <td class="p-3">
                                             <span class="font-bold text-gray-800 block">{{ $det->produk->nama_produk }}</span>
                                             
-                                            {{-- JEJAK RETUR PINTAR (SMART TRACE) --}}
+                                            {{-- FIX: JEJAK MULTI-RETUR DI DALAM BUKU STOK --}}
                                             @if($det->jumlah_diretur > 0)
                                                 @php
-                                                    // Mencari data retur yang terkait dengan barang ini di nota ini
-                                                    $jejakRetur = null;
-                                                    $notaReturTerkait = null;
+                                                    $daftarJejakRetur = [];
                                                     foreach($detail_nota_aktif->transaksiRetur as $retur) {
                                                         foreach($retur->detailRetur as $dRet) {
                                                             if($dRet->id_produk_dikembalikan === $det->id_produk) {
-                                                                $jejakRetur = $dRet;
-                                                                $notaReturTerkait = $retur;
-                                                                break 2; // Keluar dari kedua loop jika ketemu
+                                                                $daftarJejakRetur[] = ['detail' => $dRet, 'nota_retur' => $retur];
                                                             }
                                                         }
                                                     }
                                                 @endphp
 
-                                                @if($jejakRetur)
-                                                    <div class="mt-2 bg-orange-50 border border-orange-200 rounded p-2 text-xs">
-                                                        <span class="text-orange-700 font-bold block mb-1">⚠️ Telah Diretur (Kondisi: {{ $jejakRetur->kondisi_barang_dikembalikan }})</span>
-                                                        <span class="text-gray-600 block">Diganti dgn: <strong class="text-green-700">{{ $jejakRetur->produkPengganti->nama_produk }}</strong> ({{ fmod($jejakRetur->jumlah, 1) == 0 ? (int)$jejakRetur->jumlah : $jejakRetur->jumlah }} qty)</span>
+                                                @forelse($daftarJejakRetur as $jejak)
+                                                    <div class="mt-2 bg-orange-50 border border-orange-200 rounded p-3 text-xs shadow-sm relative">
+                                                        <span class="text-orange-700 font-black block mb-1 uppercase tracking-wider text-[10px]">⚠️ Diretur: {{ $jejak['nota_retur']->tanggal_retur->format('d/m/Y H:i') }}</span>
+                                                        <span class="text-gray-700 block mb-1">Dikembalikan <strong class="text-red-600">{{ fmod($jejak['detail']->jumlah, 1) == 0 ? (int)$jejak['detail']->jumlah : $jejak['detail']->jumlah }} qty</strong> (Kondisi: {{ $jejak['detail']->kondisi_barang_dikembalikan }})</span>
+                                                        <span class="text-gray-700 block mb-1">Diganti dgn: <strong class="text-green-700">{{ $jejak['detail']->produkPengganti->nama_produk }}</strong></span>
                                                         
-                                                        {{-- Tombol LOMPAT (Cross-Link) ke Detail Nota Retur --}}
-                                                        <button wire:click="lihatDetailNota({{ $notaReturTerkait->id_retur }}, 'RETUR')" class="mt-1 text-blue-600 hover:text-blue-800 font-bold underline cursor-pointer">
-                                                            &rarr; Buka Nota Retur ({{ $notaReturTerkait->kode_retur }})
-                                                        </button>                                                    </div>
-                                                @else
-                                                    <span class="block text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded font-bold mt-1 w-max">Telah Diretur: {{ fmod($det->jumlah_diretur, 1) == 0 ? (int)$det->jumlah_diretur : $det->jumlah_diretur }}</span>
-                                                @endif
+                                                        <span class="block bg-white p-1.5 rounded border border-orange-100 text-gray-600 italic mt-1.5">
+                                                            "{{ $jejak['nota_retur']->catatan ?? 'Tanpa catatan' }}"
+                                                        </span>
+                                                        
+                                                        <button wire:click="lihatDetailNota({{ $jejak['nota_retur']->id_retur }}, 'RETUR')" class="mt-2 bg-white border border-orange-300 text-orange-700 hover:bg-orange-100 px-3 py-1 rounded-full font-bold transition-colors w-max text-[10px]">
+                                                            Buka Dokumen Retur &rarr;
+                                                        </button>
+                                                    </div>
+                                                @empty
+                                                    <span class="block text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded font-bold mt-1 w-max border border-red-200">Total Diretur: {{ fmod($det->jumlah_diretur, 1) == 0 ? (int)$det->jumlah_diretur : $det->jumlah_diretur }} qty</span>
+                                                @endforelse
                                             @endif
                                         </td>
                                         <td class="p-3 text-center align-top pt-4">

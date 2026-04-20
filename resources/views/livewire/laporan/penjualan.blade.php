@@ -104,6 +104,11 @@
                         <td class="p-4">
                             <p class="font-bold text-gray-800">{{ \Carbon\Carbon::parse($trx->tanggal_transaksi)->format('d/m/Y H:i') }}</p>
                             <p class="text-[10px] text-gray-400 font-mono mt-1">{{ $trx->kode_nota }}</p>
+                            
+                            {{--Tampilkan penanda HANYA jika ada status DIRETUR --}}
+                            @if($trx->status_penjualan === 'DIRETUR')
+                                <span class="bg-orange-100 text-orange-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase mt-1 inline-block border border-orange-200">⚠️ Ada Retur</span>
+                            @endif
                         </td>
                         <td class="p-4">
                             <p class="font-bold text-blue-700">👤 {{ $trx->pelanggan->nama ?? 'Umum' }}</p>
@@ -156,27 +161,33 @@
                                 <tr>
                                     <td class="p-3">
                                         <span class="font-bold text-gray-800 block">{{ $det->produk->nama_produk }}</span>
-                                        {{-- JEJAK RETUR PINTAR (SMART TRACE) --}}
+                                        
+                                        {{-- FIX: JEJAK MULTI-RETUR DI LAPORAN PENJUALAN --}}
                                         @if($det->jumlah_diretur > 0)
                                             @php
-                                                $jejakRetur = null; $notaReturTerkait = null;
+                                                $daftarJejakRetur = [];
                                                 foreach($detail_nota->transaksiRetur as $retur) {
                                                     foreach($retur->detailRetur as $dRet) {
                                                         if($dRet->id_produk_dikembalikan === $det->id_produk) {
-                                                            $jejakRetur = $dRet; $notaReturTerkait = $retur; break 2;
+                                                            $daftarJejakRetur[] = ['detail' => $dRet, 'nota_retur' => $retur];
                                                         }
                                                     }
                                                 }
                                             @endphp
 
-                                            @if($jejakRetur)
-                                                <div class="mt-2 bg-orange-50 border border-orange-200 rounded p-2 text-xs">
-                                                    <span class="text-orange-700 font-bold block mb-1">⚠️ Telah Diretur (Kondisi: {{ $jejakRetur->kondisi_barang_dikembalikan }})</span>
-                                                    <span class="text-gray-600 block">Diganti dgn: <strong class="text-green-700">{{ $jejakRetur->produkPengganti->nama_produk }}</strong> ({{ fmod($jejakRetur->jumlah, 1) == 0 ? (int)$jejakRetur->jumlah : $jejakRetur->jumlah }} qty)</span>
+                                            @forelse($daftarJejakRetur as $jejak)
+                                                <div class="mt-2 bg-orange-50 border border-orange-200 rounded p-3 text-xs shadow-sm relative">
+                                                    <span class="text-orange-700 font-black block mb-1 uppercase tracking-wider text-[10px]">⚠️ Diretur: {{ $jejak['nota_retur']->tanggal_retur->format('d/m/Y H:i') }}</span>
+                                                    <span class="text-gray-700 block mb-1">Dikembalikan <strong class="text-red-600">{{ fmod($jejak['detail']->jumlah, 1) == 0 ? (int)$jejak['detail']->jumlah : $jejak['detail']->jumlah }} qty</strong> (Kondisi: {{ $jejak['detail']->kondisi_barang_dikembalikan }})</span>
+                                                    <span class="text-gray-700 block mb-1">Diganti dgn: <strong class="text-green-700">{{ $jejak['detail']->produkPengganti->nama_produk }}</strong></span>
+                                                    
+                                                    <span class="block bg-white p-1.5 rounded border border-orange-100 text-gray-600 italic mt-1.5">
+                                                        "{{ $jejak['nota_retur']->catatan ?? 'Tanpa catatan' }}"
+                                                    </span>
                                                 </div>
-                                            @else
-                                                <span class="block text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded font-bold mt-1 w-max">Telah Diretur: {{ fmod($det->jumlah_diretur, 1) == 0 ? (int)$det->jumlah_diretur : $det->jumlah_diretur }}</span>
-                                            @endif
+                                            @empty
+                                                <span class="block text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded font-bold mt-1 w-max border border-red-200">Total Diretur: {{ fmod($det->jumlah_diretur, 1) == 0 ? (int)$det->jumlah_diretur : $det->jumlah_diretur }} qty</span>
+                                            @endforelse
                                         @endif
                                     </td>
                                     <td class="p-3 text-center align-top pt-4">{{ fmod($det->jumlah, 1) == 0 ? (int)$det->jumlah : $det->jumlah }} {{ $det->satuan_saat_jual }}</td>

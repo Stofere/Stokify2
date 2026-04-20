@@ -14,13 +14,18 @@
         .trx-nota { font-size: 9px; color: #95a5a6; font-family: monospace; display: inline-block; margin-left: 10px; font-weight: normal;}
         
         table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+        th, td { padding: 5px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
         th { text-align: left; font-size: 9px; color: #7f8c8d; text-transform: uppercase; background: #fafafa; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
         
         .total-row td { border-top: 2px solid #bdc3c7; font-weight: bold; font-size: 11px; background: #fff; }
         .grand-total { text-align: right; font-size: 14px; margin-top: 20px; padding-top: 10px; border-top: 3px double #2c3e50; }
+
+        .retur-box { background-color: #fff4e6; border: 1px dashed #f39c12; margin-top: 4px; padding: 4px; font-size: 9px; border-radius: 2px; }
+        .retur-title { font-weight: bold; color: #d35400; text-transform: uppercase; font-size: 8px; margin-bottom: 2px; display: block;}
+        .retur-note { font-style: italic; color: #7f8c8d; margin-top: 2px; display: block; border-top: 1px solid #fae5d3; padding-top: 2px; }
+        .badge-retur { background: #f39c12; color: #fff; padding: 2px 4px; border-radius: 2px; font-size: 8px; text-transform: uppercase; font-weight: bold; margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -43,6 +48,9 @@
                     Pelanggan: {{ $trx->pelanggan->nama ?? 'Umum' }} &nbsp;|&nbsp; 
                     Sales: {{ $trx->marketing->nama ?? '-' }}
                     <span class="trx-nota">(Nota: {{ $trx->kode_nota }})</span>
+                    @if($trx->status_penjualan === 'DIRETUR')
+                        <span class="badge-retur">Ada Retur</span>
+                    @endif
                 </p>
             </div>
             <table>
@@ -60,6 +68,28 @@
                         <td>
                             <strong>{{ $det->produk->nama_produk }}</strong><br>
                             <span style="font-size: 8px; color:#7f8c8d; font-family: monospace;">{{ $det->produk->kode_barang }}</span>
+                            
+                            {{-- LOGIKA MULTI-RETUR CETAK PDF --}}
+                            @if($det->jumlah_diretur > 0)
+                                @php
+                                    $daftarJejakRetur = [];
+                                    foreach($trx->transaksiRetur as $retur) {
+                                        foreach($retur->detailRetur as $dRet) {
+                                            if($dRet->id_produk_dikembalikan === $det->id_produk) {
+                                                $daftarJejakRetur[] = ['detail' => $dRet, 'nota_retur' => $retur];
+                                            }
+                                        }
+                                    }
+                                @endphp
+                                @foreach($daftarJejakRetur as $jejak)
+                                    <div class="retur-box">
+                                        <span class="retur-title">Diretur pada: {{ $jejak['nota_retur']->tanggal_retur->format('d/m/Y') }}</span>
+                                        Kembali: <strong>{{ fmod($jejak['detail']->jumlah, 1) == 0 ? (int)$jejak['detail']->jumlah : $jejak['detail']->jumlah }} qty</strong> ({{ $jejak['detail']->kondisi_barang_dikembalikan }})<br>
+                                        Ganti dgn: <strong>{{ $jejak['detail']->produkPengganti->nama_produk }}</strong>
+                                        <span class="retur-note">"{{ $jejak['nota_retur']->catatan ?? 'Tanpa catatan' }}"</span>
+                                    </div>
+                                @endforeach
+                            @endif
                         </td>
                         <td class="text-center">{{ fmod($det->jumlah, 1) == 0 ? (int)$det->jumlah : $det->jumlah }} {{ $det->satuan_saat_jual }}</td>
                         <td class="text-right">Rp {{ number_format($det->harga_satuan, 0, ',', '.') }}</td>

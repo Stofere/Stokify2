@@ -190,7 +190,6 @@
                 <h2 class="font-headline text-2xl md:text-3xl font-bold text-charcoal">Ringkasan Sistem ERP</h2>
                 <p class="text-slate-500 text-sm mt-1">Dasbor manajemen — analisis data real-time.</p>
             </div>
-            <span class="bg-blue-pro/10 text-blue-pro px-3 py-1.5 rounded-lg text-xs font-bold">{{ \Carbon\Carbon::now()->translatedFormat('l, d F Y') }}</span>
         </div>
 
         {{-- KPI Row --}}
@@ -229,7 +228,7 @@
                 <div>
                     <p class="text-[10px] font-label font-bold uppercase tracking-widest text-slate-400">Selisih Retur Hari Ini</p>
                     <h3 class="font-headline text-xl font-bold text-charcoal mt-1">Rp {{ number_format($returHariIni, 0, ',', '.') }}</h3>
-                    <p class="text-[10px] text-slate-400 mt-0.5 font-semibold">(+) Plg Nombok, (-) Toko Rugi</p>
+                    <p class="text-[10px] text-slate-400 mt-0.5 font-semibold">(+) Pelanggan Nombok, (-) Toko Rugi</p>
                 </div>
             </div>
         </div>
@@ -246,29 +245,29 @@
             </div>
 
             {{-- Activity Log --}}
-            <div class="bg-white rounded-2xl border border-slate-100 flex flex-col h-full overflow-hidden">
-                <h4 class="font-label text-[11px] font-bold uppercase tracking-widest text-slate-400 p-5 pb-3 border-b border-slate-100">Log Aktivitas Hari Ini</h4>
-                <div class="flex-1 overflow-y-auto p-5" style="max-height: 280px;">
-                    @if(count($aktivitasHariIni) == 0)
-                        <p class="text-center text-slate-400 text-sm font-semibold mt-8">Belum ada aktivitas hari ini.</p>
-                    @else
-                        <div class="space-y-3">
-                            @foreach($aktivitasHariIni as $log)
-                                <div class="flex gap-3 text-sm items-start">
-                                    <div class="w-2 h-2 mt-1.5 rounded-full shrink-0 {{ in_array($log->tipe, ['MASUK', 'KOREKSI_PLUS']) ? 'bg-emerald-400' : (in_array($log->tipe, ['KELUAR', 'KOREKSI_MINUS']) ? 'bg-red-400' : 'bg-blue-400') }}"></div>
-                                    <div>
-                                        <p class="font-semibold text-charcoal">{{ $log->user->name }}</p>
-                                        <p class="text-slate-500 text-xs">
-                                            {{ str_replace('_', ' ', $log->tipe) }} <span class="font-bold text-charcoal">{{ abs($log->jumlah) }}</span> qty — <span class="text-blue-pro font-semibold">{{ $log->produk->nama_produk }}</span>
-                                        </p>
-                                        <p class="text-[10px] text-slate-400 mt-0.5">{{ $log->created_at->diffForHumans() }}</p>
-                                    </div>
+            <div class="bg-white rounded-2xl overflow-hidden">
+            <h4 class="font-label text-[11px] font-bold uppercase tracking-widest text-slate-400 px-6 pt-5 pb-3">Log Aktivitas Sistem Hari Ini</h4>
+            <div class="px-6 pb-5 max-h-[280px] overflow-y-auto">
+                @if(count($aktivitasHariIni) == 0)
+                    <p class="text-center text-slate-400 text-sm font-semibold py-8">Belum ada aktivitas hari ini.</p>
+                @else
+                    <div class="space-y-3">
+                        @foreach($aktivitasHariIni as $log)
+                            <div class="flex gap-3 text-sm items-start">
+                                <div class="w-2 h-2 mt-1.5 rounded-full shrink-0 {{ in_array($log->tipe, ['MASUK', 'KOREKSI_PLUS']) ? 'bg-emerald-400' : (in_array($log->tipe, ['KELUAR', 'KOREKSI_MINUS']) ? 'bg-red-400' : 'bg-sage') }}"></div>
+                                <div>
+                                    <p class="font-semibold text-sage-dark">{{ $log->user->name }}</p>
+                                    <p class="text-slate-500 text-xs">
+                                        {{ str_replace('_', ' ', $log->tipe) }} <span class="font-bold text-sage-dark">{{ abs($log->jumlah) }}</span> qty pada <span class="text-sage font-semibold">{{ $log->produk->nama_produk }}</span>.
+                                    </p>
+                                    <p class="text-[10px] text-slate-400 mt-0.5">{{ $log->created_at->diffForHumans() }} | {{ $log->keterangan }}</p>
                                 </div>
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
             </div>
+        </div>
         </div>
 
         {{-- Top Performers Row --}}

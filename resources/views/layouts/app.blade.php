@@ -54,14 +54,10 @@
 <body class="font-body antialiased min-h-screen {{ $isOwnerRole ? 'bg-slate-100' : 'bg-[#F8F9FA]' }}"
       x-data="{ sidebarOpen: true, mobileMenuOpen: false }">
 
-    <!-- ============================== -->
-    <!-- DESKTOP SIDEBAR                -->
-    <!-- ============================== -->
     <aside class="hidden md:flex flex-col fixed left-0 top-0 h-screen z-40 sidebar-transition overflow-hidden
                   {{ $isOwnerRole ? 'bg-charcoal text-slate-300' : 'bg-sage-bg text-sage-dark' }}"
            :class="sidebarOpen ? 'w-64' : 'w-20'">
 
-        <!-- Logo Area -->
         <div class="px-5 py-6 flex items-center gap-3 shrink-0 {{ $isOwnerRole ? 'border-b border-slate-700' : 'border-b border-sage/20' }}">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-headline font-bold text-lg
                         {{ $isOwnerRole ? 'bg-blue-pro text-white' : 'bg-sage text-white' }}">
@@ -75,30 +71,34 @@
             </div>
         </div>
 
-        <!-- Nav Items -->
         <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             @php
+                // Menu direstrukturisasi agar lebih rapi dan ikon dibedakan
                 $navItems = [
                     ['label' => 'Dashboard', 'icon' => 'dashboard', 'href' => '/dashboard', 'match' => 'dashboard'],
-                    ['label' => '', 'divider' => true, 'text' => 'Aktivitas Toko'],
                     ['label' => 'Kasir POS', 'icon' => 'point_of_sale', 'href' => '/pos', 'match' => 'pos'],
-                    ['label' => 'Retur Barang', 'icon' => 'swap_horiz', 'href' => '/retur', 'match' => 'retur'],
-                    ['label' => 'Riwayat Transaksi', 'icon' => 'receipt_long', 'href' => '/transaksi/riwayat', 'match' => 'transaksi'],
+                    
+                    ['label' => '', 'divider' => true, 'text' => 'Transaksi'],
+                    ['label' => 'Retur Barang', 'icon' => 'assignment_return', 'href' => '/retur', 'match' => 'retur'],
+                    ['label' => 'Riwayat Transaksi', 'icon' => 'history', 'href' => '/transaksi/riwayat', 'match' => 'transaksi'],
+                    
+                    ['label' => '', 'divider' => true, 'text' => 'Laporan & Analitik'],
+                    ['label' => 'Lap. Penjualan', 'icon' => 'bar_chart', 'href' => '/laporan/penjualan', 'match' => 'laporan/penjualan'],
+                    ['label' => 'Lap. Katalog', 'icon' => 'pie_chart', 'href' => '/laporan/katalog', 'match' => 'laporan/katalog'],
+                    
                     ['label' => '', 'divider' => true, 'text' => 'Master Data'],
-                    ['label' => 'Laporan Penjualan', 'icon' => 'receipt_long', 'href' => '/laporan/penjualan', 'match' => 'laporan/penjualan'],
-                    ['label' => 'Laporan Katalog', 'icon' => 'receipt_long', 'href' => '/laporan/katalog', 'match' => 'laporan/katalog'],
                     ['label' => 'Katalog Produk', 'icon' => 'inventory_2', 'href' => '/master/produk', 'match' => 'master/produk'],
                     ['label' => 'Kategori', 'icon' => 'category', 'href' => '/master/kategori', 'match' => 'master/kategori'],
                     ['label' => 'Atribut', 'icon' => 'tune', 'href' => '/master/atribut', 'match' => 'master/atribut'],
                     ['label' => 'Pelanggan', 'icon' => 'group', 'href' => '/master/pelanggan', 'match' => 'master/pelanggan'],
-                    ['label' => 'Marketing', 'icon' => 'badge', 'href' => '/master/marketing', 'match' => 'master/marketing'],
+                    ['label' => 'Marketing', 'icon' => 'campaign', 'href' => '/master/marketing', 'match' => 'master/marketing'],
                 ];
             @endphp
 
             @foreach($navItems as $item)
                 @if(isset($item['divider']))
-                    <div class="pt-4 pb-1 px-3" x-show="sidebarOpen" x-transition.opacity>
-                        <p class="text-[10px] font-label font-bold uppercase tracking-[0.15em] {{ $isOwnerRole ? 'text-slate-500' : 'text-sage/60' }}">
+                    <div class="pt-5 pb-2 px-3" x-show="sidebarOpen" x-transition.opacity>
+                        <p class="text-[10px] font-label font-bold uppercase tracking-[0.15em] {{ $isOwnerRole ? 'text-slate-500' : 'text-sage/70' }}">
                             {{ $item['text'] }}
                         </p>
                     </div>
@@ -125,9 +125,7 @@
             @endforeach
         </nav>
 
-        <!-- Bottom Section -->
         <div class="px-3 py-4 space-y-1 shrink-0 {{ $isOwnerRole ? 'border-t border-slate-700' : 'border-t border-sage/20' }}">
-            <!-- Collapse Toggle -->
             <button @click="sidebarOpen = !sidebarOpen"
                     class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
                            {{ $isOwnerRole ? 'text-slate-400 hover:text-white hover:bg-slate-700/40' : 'text-slate-500 hover:text-sage-dark hover:bg-white/50' }}">
@@ -136,7 +134,6 @@
                 <span x-show="sidebarOpen" x-transition.opacity class="text-sm font-semibold">Tutup Menu</span>
             </button>
 
-            <!-- Logout -->
             <form action="/logout" method="POST">
                 @csrf
                 <button type="submit"
@@ -148,7 +145,6 @@
             </form>
         </div>
 
-        <!-- User Badge -->
         <div class="px-4 py-3 shrink-0 {{ $isOwnerRole ? 'bg-slate-800/50' : 'bg-sage/10' }}">
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0
@@ -163,13 +159,9 @@
         </div>
     </aside>
 
-    <!-- ============================== -->
-    <!-- MAIN CONTENT AREA              -->
-    <!-- ============================== -->
     <div class="flex-1 flex flex-col min-h-screen transition-all duration-300 md:pb-0 pb-20"
          :class="sidebarOpen ? 'md:ml-64' : 'md:ml-20'">
 
-        <!-- Top Header (Desktop) -->
         <header class="hidden md:flex items-center justify-between px-8 h-14 shrink-0
                         {{ $isOwnerRole ? 'bg-white border-b border-slate-200' : 'bg-white/60 backdrop-blur-md border-b border-sage/10' }}">
             <div class="flex items-center gap-2">
@@ -183,7 +175,6 @@
             </div>
         </header>
 
-        <!-- Mobile Header -->
         <header class="md:hidden flex items-center justify-between px-4 h-14 shrink-0
                         {{ $isOwnerRole ? 'bg-charcoal text-white' : 'bg-white border-b border-sage/10' }}">
             <div class="flex items-center gap-2">
@@ -199,15 +190,25 @@
             </div>
         </header>
 
-        <!-- Page Content -->
-        <main class="flex-1 overflow-x-hidden overflow-y-auto relative">
-            {{ $slot }}
+        <main class="flex-1 flex flex-col overflow-x-hidden overflow-y-auto relative">
+            
+            <div class="flex-1">
+                {{ $slot }}
+            </div>
+
+            <footer class="mt-auto py-5 px-8 flex flex-col md:flex-row justify-between items-center gap-2 shrink-0 border-t 
+                           {{ $isOwnerRole ? 'border-slate-200 text-slate-400' : 'border-sage/10 text-sage/70' }}">
+                <p class="text-[11px] font-label font-medium tracking-wide">
+                    &copy; {{ date('Y') }} Stokify POS Enterprise.
+                </p>
+                <p class="text-[11px] font-label tracking-wide">
+                    Engineered by <span class="font-bold {{ $isOwnerRole ? 'text-slate-500' : 'text-sage-dark' }}">Roger Jeremy</span>
+                </p>
+            </footer>
+
         </main>
     </div>
 
-    <!-- ============================== -->
-    <!-- MOBILE BOTTOM NAV              -->
-    <!-- ============================== -->
     <nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pb-5 pt-2
                 {{ $isOwnerRole
                     ? 'bg-charcoal/90 backdrop-blur-xl border-t border-slate-700'
@@ -219,8 +220,8 @@
                 ['icon' => 'dashboard', 'href' => '/dashboard', 'match' => 'dashboard', 'label' => 'Home'],
                 ['icon' => 'point_of_sale', 'href' => '/pos', 'match' => 'pos', 'label' => 'POS'],
                 ['icon' => 'inventory_2', 'href' => '/master/produk', 'match' => 'master/produk', 'label' => 'Stok'],
-                ['icon' => 'swap_horiz', 'href' => '/retur', 'match' => 'retur', 'label' => 'Retur'],
-                ['icon' => 'receipt_long', 'href' => '/transaksi/riwayat', 'match' => 'transaksi', 'label' => 'Riwayat'],
+                ['icon' => 'assignment_return', 'href' => '/retur', 'match' => 'retur', 'label' => 'Retur'],
+                ['icon' => 'history', 'href' => '/transaksi/riwayat', 'match' => 'transaksi', 'label' => 'Riwayat'],
             ];
         @endphp
         @foreach($mobileNav as $mItem)
