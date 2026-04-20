@@ -254,9 +254,9 @@
                 <div>
                     <h3 class="font-headline text-xl font-bold flex items-center gap-2">
                         <span class="material-symbols-outlined text-[22px]">inventory_2</span>
-                        Buku Mutasi & Koreksi Stok
+                        {{ $produk_stok_aktif->nama_produk }} ({{ $produk_stok_aktif->kode_barang }})
                     </h3>
-                    <p class="text-sm mt-0.5 opacity-80">{{ $produk_stok_aktif->nama_produk }} ({{ $produk_stok_aktif->kode_barang }})</p>
+                    <p class="text-sm mt-0.5 opacity-80">Buku Mutasi & Koreksi Stok</p>
                 </div>
                 <button wire:click="tutupModalStok" class="px-4 py-2 rounded-lg font-bold text-sm bg-white/10 hover:bg-red-500 transition-colors">Tutup</button>
             </div>
@@ -437,7 +437,7 @@
                         {{-- PASSWORD OTORISASI DIPINDAH KE SINI --}}
                         <div class="mt-6 bg-red-50 border border-red-200 rounded-xl p-5 shadow-sm">
                             <label class="block text-[10px] font-bold text-red-700 mb-1.5 uppercase tracking-widest">Otorisasi Keamanan (Wajib)</label>
-                            <p class="text-xs text-red-600 mb-3 font-medium">Tindakan ini akan tercatat permanen di CCTV sistem. Masukkan password.</p>
+                            <p class="text-xs text-red-600 mb-3 font-medium">Tindakan ini akan tercatat permanen di SISTEM. Masukkan password.</p>
                             <input type="password" wire:model="password_admin" placeholder="Masukkan Password Akun Anda..." class="w-full border border-red-200 rounded-lg p-3 focus:ring-2 focus:ring-red-200 text-sm font-semibold bg-white shadow-inner">
                             @error('password_admin') <span class="text-red-500 text-xs font-semibold mt-1 block">{{ $message }}</span> @enderror
                         </div>
@@ -555,6 +555,7 @@
                                 </div>
                             @endforeach
                         </div>
+                        
                         <div class="mt-5 p-4 rounded-xl bg-slate-50">
                             <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status Keuangan</p>
                             @if($detail_nota_aktif->total_biaya_retur > 0)

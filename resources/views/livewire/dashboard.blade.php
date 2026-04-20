@@ -38,8 +38,8 @@
     <div class="px-4 md:px-8 pt-6">
         <div class="w-full bg-gradient-to-br from-[#E0F2F1] via-[#F1F5F9] to-[#F8F9FA] rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between relative overflow-hidden group">
 
-            {{-- Chibi Frieren --}}
-            <div id="frieren-chibi" class="relative w-32 h-32 md:w-48 md:h-48 shrink-0 frieren-float z-10 block order-last md:order-none cursor-pointer">
+            {{-- Anime Image Character --}}
+            <div id="frieren-chibi" class="relative w-40 h-40 md:w-64 md:h-64 shrink-0 frieren-float z-10 block order-last md:order-none cursor-pointer">
                 <img src="/images/chibi-frieren-open.png" alt="Frieren"
                     class="absolute inset-0 w-full h-full object-contain frieren-wave transition-transform duration-500 group-hover:scale-105 frieren-eye-open">
                 <img src="/images/chibi-frieren-blink.png" alt="Frieren Blink"
@@ -120,6 +120,59 @@
                 @endif
             </div>
         </div>
+
+        {{-- Top Performers Row --}}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+            {{-- Top Marketing --}}
+            <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                <h4 class="font-label text-[11px] font-bold uppercase tracking-widest px-5 pt-5 pb-3 text-slate-400 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px] text-amber-500">emoji_events</span>
+                    Performa Marketing (Bulan Ini)
+                </h4>
+                <div class="divide-y divide-slate-50">
+                    @forelse($topMarketing as $index => $mkt)
+                        <div class="px-5 py-3 flex justify-between items-center hover:bg-slate-50/50 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <div class="w-7 h-7 rounded-full bg-blue-pro/10 text-blue-pro flex items-center justify-center text-xs font-bold">{{ $index + 1 }}</div>
+                                <p class="font-semibold text-charcoal text-sm">{{ $mkt->marketing->nama }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-lg font-headline font-bold text-blue-pro">{{ $mkt->total_transaksi }}</p>
+                                <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Kali Jualan</p>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="px-5 py-6 text-center text-slate-400 text-sm font-semibold">Belum ada data marketing bulan ini.</div>
+                    @endforelse
+                </div>
+            </div>
+
+            {{-- Top Pelanggan --}}
+            <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+                <h4 class="font-label text-[11px] font-bold uppercase tracking-widest px-5 pt-5 pb-3 text-slate-400 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px] text-rose-400">favorite</span>
+                    Pelanggan Paling Aktif (Bulan Ini)
+                </h4>
+                <div class="divide-y divide-slate-50">
+                    @forelse($topPelanggan as $index => $plg)
+                        <div class="px-5 py-3 flex justify-between items-center hover:bg-slate-50/50 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <div class="w-7 h-7 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center text-xs font-bold">{{ $index + 1 }}</div>
+                                <p class="font-semibold text-charcoal text-sm">{{ $plg->pelanggan->nama }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-lg font-headline font-bold text-rose-500">{{ $plg->total_transaksi }}</p>
+                                <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Kali Beli</p>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="px-5 py-6 text-center text-slate-400 text-sm font-semibold">Belum ada data pelanggan tercatat.</div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
     </div>
 
     @endif

@@ -178,7 +178,7 @@
             </div>
             <div class="flex items-center gap-4">
                 <span class="text-xs font-label {{ $isOwnerRole ? 'text-slate-400 bg-slate-100 border border-slate-200' : 'text-sage bg-sage-light/50 border border-sage/20' }} px-3 py-1 rounded-full font-semibold">
-                    {{ \Carbon\Carbon::now()->translatedFormat('l, d M Y') }}
+                    {{ \Carbon\Carbon::now()->locale('id')->translatedFormat('l, d M Y') }}
                 </span>
             </div>
         </header>

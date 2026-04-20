@@ -157,8 +157,21 @@ class ProdukIndex extends Component
         $this->updatedIdKategori($this->id_kategori);
         $this->metadata_input = $produk->metadata ?? [];
 
-        if(isset($this->metadata_input['Tekstur']) && is_string($this->metadata_input['Tekstur'])) {
-            $this->metadata_input['Tekstur'] = array_map('trim', explode(',', $this->metadata_input['Tekstur']));
+        // ==========================================
+        // FIX: BUG CHECKBOX MULTI-SELECT LIVEWIRE
+        // ==========================================
+        // Kita harus memastikan atribut 'Tekstur' selalu berbentuk Array saat form Edit dibuka.
+        if (isset($this->metadata_input['Tekstur'])) {
+            if (is_string($this->metadata_input['Tekstur'])) {
+                // Jika dari database berupa string (misal: "Halus, Kasar"), pecah jadi array
+                $this->metadata_input['Tekstur'] = array_map('trim', explode(',', $this->metadata_input['Tekstur']));
+            } elseif (is_null($this->metadata_input['Tekstur'])) {
+                // Jika dari database null (karena sebelumnya di-uncheck semua), paksakan jadi array kosong
+                $this->metadata_input['Tekstur'] = [];
+            }
+        } else {
+            // Jika key 'Tekstur' sama sekali tidak ada di JSON, paksakan buat key baru berbentuk array kosong
+            $this->metadata_input['Tekstur'] = [];
         }
         
         $this->form_open = true;
