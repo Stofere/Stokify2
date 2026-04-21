@@ -96,6 +96,8 @@ class ProdukIndex extends Component
         ]);
 
         $metadataFinal = [];
+        
+        // Simpan Atribut Dinamis (Merk, Ring, dll)
         foreach ($this->atributDinamis as $attr) {
             $val = $this->metadata_input[$attr->nama_atribut] ?? null;
             if (!empty($val)) {
@@ -105,6 +107,11 @@ class ProdukIndex extends Component
                     $metadataFinal[$attr->nama_atribut] = $val;
                 }
             }
+        }
+
+        // FIX TAHAP 2: Simpan Harga Meter (Jika satuan KG/ROL dan diisi)
+        if (in_array($this->satuan, ['kg', 'rol']) && !empty($this->metadata_input['harga_meter'])) {
+            $metadataFinal['harga_meter'] = $this->metadata_input['harga_meter'];
         }
 
         $metaString = !empty($metadataFinal) ? implode(' ', array_values($metadataFinal)) : '';
@@ -156,6 +163,12 @@ class ProdukIndex extends Component
         
         $this->updatedIdKategori($this->id_kategori);
         $this->metadata_input = $produk->metadata ?? [];
+
+        // Tarik kembali Harga Meter
+        if (isset($produk->metadata['harga_meter'])) {
+            $this->metadata_input['harga_meter'] = $produk->metadata['harga_meter'];
+        }
+
 
         // ==========================================
         // FIX: BUG CHECKBOX MULTI-SELECT LIVEWIRE

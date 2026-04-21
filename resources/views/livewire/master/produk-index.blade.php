@@ -71,7 +71,7 @@
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Satuan</label>
-                                    <select wire:model="satuan" class="w-full border-0 rounded-lg p-2.5 text-sm bg-slate-50">
+                                    <select wire:model.live="satuan" class="w-full border-0 rounded-lg p-2.5 text-sm bg-slate-50">
                                         <option value="pcs">Pcs / Biji</option>
                                         <option value="meter">Meter</option>
                                         <option value="kg">Kilogram</option>
@@ -83,6 +83,15 @@
                                     <input type="number" wire:model="harga_jual_satuan" placeholder="150000" class="w-full border-0 rounded-lg p-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }}">
                                     @error('harga_jual_satuan') <span class="text-red-500 text-xs mt-1 block font-semibold">{{ $message }}</span> @enderror
                                 </div>
+
+                                @if(in_array($satuan, ['kg', 'rol']))
+                                    <div class="col-span-2 mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                        <label class="block text-sm font-bold text-amber-900 mb-1">Harga Eceran per Meter (Opsional)</label>
+                                        <p class="text-[10px] text-amber-700 mb-2">Isi jika barang ini (Kertas Film/Kabel) bisa diecer per meter di kasir.</p>
+                                        <input type="number" wire:model="metadata_input.harga_meter" placeholder="Contoh: 15000" class="w-full border-amber-300 rounded-lg p-2.5 border focus:ring-amber-500 bg-white">
+                                    </div>
+                                @endif
+
                                 <div>
                                     <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Lokasi Rak</label>
                                     <input type="text" wire:model="lokasi" placeholder="Rak A1" class="w-full border-0 rounded-lg p-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }}">
@@ -196,16 +205,29 @@
                                 @endif
                             </div>
                             @if($prod->metadata)
-                                <div class="flex flex-wrap gap-1 mt-2">
+                                <div class="mt-2 flex flex-wrap gap-1.5">
                                     @foreach($prod->metadata as $key => $val)
-                                        <span class="bg-teal-50 text-teal-700 text-[10px] px-2 py-0.5 rounded-full font-semibold">{{ $val }}</span>
+                                        {{-- Sembunyikan harga_meter dari tumpukan pill spesifikasi --}}
+                                        @if($key !== 'harga_meter')
+                                            <span class="bg-blue-100 text-blue-700 text-[11px] px-2 py-0.5 rounded-full font-semibold">{{ $val }}</span>
+                                        @endif
                                     @endforeach
                                 </div>
                             @endif
                         </td>
                         <td class="p-4 text-right">
-                            <span x-show="!showHargaGlobal" class="font-bold text-slate-300 text-base">Rp ***.***</span>
-                            <span x-show="showHargaGlobal" style="display: none;" class="font-bold text-emerald-600 text-base">Rp {{ number_format($prod->harga_jual_satuan, 0, ',', '.') }}</span>
+                            <div class="flex flex-col items-end justify-center h-full">
+                                <span x-show="!showHargaGlobal" class="font-black text-gray-400 text-lg select-none">Rp ***.***</span>
+                                
+                                <div x-show="showHargaGlobal" style="display: none;" class="text-right">
+                                    <span class="font-black text-green-700 text-lg block">Rp {{ number_format($prod->harga_jual_satuan, 0, ',', '.') }} <span class="text-[10px] text-gray-500 uppercase">/{{ $prod->satuan }}</span></span>
+                                    
+                                    {{-- Jika ada harga ecer meteran --}}
+                                    @if(isset($prod->metadata['harga_meter']))
+                                        <span class="font-bold text-amber-600 text-xs block mt-1">Rp {{ number_format($prod->metadata['harga_meter'], 0, ',', '.') }} <span class="text-[9px] text-gray-500 uppercase">/Mtr</span></span>
+                                    @endif
+                                </div>
+                            </div>
                         </td>
                         <td class="p-4 text-center">
                             @if($prod->lacak_stok)
@@ -292,7 +314,7 @@
                             <label class="block text-sm font-bold text-gray-700 mb-1">Jumlah Fisik Mutasi ({{ $produk_stok_aktif->satuan }})</label>
                             @php
                                 $isPcsMutasi = in_array(strtolower($produk_stok_aktif->satuan), ['pcs', 'biji', 'unit', 'buah']);
-                                $stepMutasi = $isPcsMutasi ? "1" : "0.01";
+                                $stepMutasi = $isPcsMutasi ? "1" : "0.001"; 
                             @endphp
                             <input type="number" 
                                    step="{{ $stepMutasi }}" 

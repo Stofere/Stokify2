@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('satuan', 50);
             $table->decimal('harga_jual_satuan', 15, 2)->default(0.00);
             $table->boolean('lacak_stok')->default(true);
-            $table->decimal('stok_saat_ini', 15, 2)->default(0.00);
+            $table->decimal('stok_saat_ini', 15, 3)->default(0.000);
             $table->json('metadata')->nullable();
             $table->text('index_pencarian');
             $table->string('lokasi', 255)->nullable();

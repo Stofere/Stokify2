@@ -31,7 +31,7 @@ class Produk extends Model
         'lacak_stok' => 'boolean',
         'status_aktif' => 'boolean',
         'harga_jual_satuan' => 'decimal:2',
-        'stok_saat_ini' => 'decimal:2',
+        'stok_saat_ini' => 'decimal:3',
     ];
 
     // Accessor: Membersihkan .00 jika satuan adalah pcs/unit

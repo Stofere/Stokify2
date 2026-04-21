@@ -15,9 +15,9 @@ return new class extends Migration
             $table->unsignedBigInteger('id_transaksi_penjualan')->nullable();
             $table->unsignedBigInteger('id_retur')->nullable();
             $table->enum('tipe', ['AWAL', 'MASUK', 'KELUAR', 'KOREKSI_PLUS', 'KOREKSI_MINUS', 'BATAL_JUAL']);
-            $table->decimal('jumlah', 15, 2);
-            $table->decimal('stok_sebelum', 15, 2);
-            $table->decimal('stok_sesudah', 15, 2);
+            $table->decimal('jumlah', 15, 3);
+            $table->decimal('stok_sebelum', 15, 3);
+            $table->decimal('stok_sesudah', 15, 3);
             $table->string('keterangan', 255);
             $table->timestamps();
 

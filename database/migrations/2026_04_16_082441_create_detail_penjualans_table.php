@@ -12,8 +12,8 @@ return new class extends Migration
             $table->id('id_detail_penjualan');
             $table->unsignedBigInteger('id_transaksi_penjualan');
             $table->unsignedBigInteger('id_produk');
-            $table->decimal('jumlah', 15, 2);
-            $table->decimal('jumlah_diretur', 15, 2)->default(0.00);
+            $table->decimal('jumlah', 15, 3);
+            $table->decimal('jumlah_diretur', 15, 3)->default(0.000);
             $table->string('satuan_saat_jual', 50);
             $table->decimal('harga_satuan', 15, 2);
             $table->decimal('subtotal', 15, 2);

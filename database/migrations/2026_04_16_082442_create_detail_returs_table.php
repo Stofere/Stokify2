@@ -13,7 +13,7 @@ return new class extends Migration
             $table->unsignedBigInteger('id_retur');
             $table->unsignedBigInteger('id_produk_dikembalikan');
             $table->unsignedBigInteger('id_produk_pengganti');
-            $table->decimal('jumlah', 15, 2);
+            $table->decimal('jumlah', 15, 3);
             $table->enum('kondisi_barang_dikembalikan', ['BAGUS', 'RUSAK']);
             $table->decimal('subtotal_biaya', 15, 2)->default(0.00);
             $table->timestamps();

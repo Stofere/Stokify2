@@ -22,8 +22,8 @@ class DetailPenjualan extends Model
     ];
 
     protected $casts = [
-        'jumlah' => 'decimal:2',
-        'jumlah_diretur' => 'decimal:2',
+        'jumlah' => 'decimal:3',
+        'jumlah_diretur' => 'decimal:3',
         'harga_satuan' => 'decimal:2',
         'subtotal' => 'decimal:2',
     ];
