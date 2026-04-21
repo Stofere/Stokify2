@@ -55,19 +55,42 @@
                         <div class="flex flex-wrap gap-1.5">
                             @php
                                 $pillColors = ['bg-teal-50 text-teal-700', 'bg-amber-50 text-amber-700', 'bg-violet-50 text-violet-700', 'bg-rose-50 text-rose-700', 'bg-sky-50 text-sky-700', 'bg-emerald-50 text-emerald-700'];
+                                $pillIndex = 0;
                             @endphp
                             @foreach($produk->metadata as $key => $val)
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide {{ $pillColors[$loop->index % count($pillColors)] }}">{{ is_array($val) ? implode(', ', $val) : $val }}</span>
+                                {{-- Sembunyikan harga_meter dari pill spesifikasi --}}
+                                @if($key !== 'harga_meter')
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide {{ $pillColors[$pillIndex % count($pillColors)] }}">{{ is_array($val) ? implode(', ', $val) : $val }}</span>
+                                    @php $pillIndex++; @endphp
+                                @endif
                             @endforeach
                         </div>
                     @endif
 
-                    <div class="mt-auto pt-3 flex justify-between items-end border-t border-slate-50">
+                    @php $hasDualPrice = isset($produk->metadata['harga_meter']); @endphp
+                    <div class="mt-auto pt-3 flex justify-between items-end border-t {{ $hasDualPrice ? 'border-amber-100' : 'border-slate-50' }}">
                         <div>
-                            <span x-show="showPrices" x-transition.opacity class="font-headline text-lg font-bold {{ $isOwnerRole ? 'text-blue-pro' : 'text-sage-dark' }}">
-                                Rp {{ number_format($produk->harga_jual_satuan, 0, ',', '.') }}
-                            </span>
+                            {{-- Harga Tersembunyi --}}
                             <span x-show="!showPrices" class="font-headline text-lg font-bold text-slate-300">Rp ***</span>
+
+                            {{-- Harga Tampil: Dual-Unit (Meter + KG) --}}
+                            @if($hasDualPrice)
+                                <div x-show="showPrices" x-transition.opacity class="flex flex-col gap-0.5">
+                                    <span class="font-headline text-base font-bold text-amber-600">
+                                        Rp {{ number_format($produk->metadata['harga_meter'], 0, ',', '.') }}
+                                        <span class="text-[10px] font-semibold text-amber-500">/ Meter</span>
+                                    </span>
+                                    <span class="font-headline text-xs font-bold {{ $isOwnerRole ? 'text-blue-pro/70' : 'text-sage/70' }}">
+                                        Rp {{ number_format($produk->harga_jual_satuan, 0, ',', '.') }}
+                                        <span class="text-[10px] font-semibold text-slate-400">/ {{ strtoupper($produk->satuan) }}</span>
+                                    </span>
+                                </div>
+                            @else
+                                {{-- Harga Tampil: Single-Unit --}}
+                                <span x-show="showPrices" x-transition.opacity class="font-headline text-lg font-bold {{ $isOwnerRole ? 'text-blue-pro' : 'text-sage-dark' }}">
+                                    Rp {{ number_format($produk->harga_jual_satuan, 0, ',', '.') }}
+                                </span>
+                            @endif
                         </div>
                         @if($produk->lacak_stok)
                             <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full {{ $produk->stok_saat_ini > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500' }}">
@@ -181,6 +204,13 @@
                     @endif
                 </div>
 
+                {{-- TANGGAL TRANSAKSI (Backdate Support) --}}
+                <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+                    <label class="block text-[10px] font-label font-bold uppercase tracking-wider text-slate-400 mb-1">Tanggal Transaksi</label>
+                    <input wire:model="tanggal_transaksi" type="datetime-local" 
+                           class="w-full border-0 rounded-lg px-3 py-2 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/30' : 'focus:ring-sage/30' }} font-semibold {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }}">
+                </div>
+
             </div>
 
             {{-- Empty State --}}
@@ -191,31 +221,57 @@
                 </div>
             @else
                 {{-- Cart Items --}}
-                <div class="flex-1 overflow-y-auto space-y-2 pr-1">
+                <div class="flex-1 overflow-y-auto space-y-3 pr-1">
                     @foreach($keranjang as $index => $item)
                         @php
-                            // FIX: Mengunci panah atas/bawah HTML berdasarkan satuan
-                            $isPcs = in_array($item['satuan'], ['pcs', 'biji', 'unit', 'buah']);
-                            $stepValue = $isPcs ? "1" : "0.01";
+                            $isPcs = in_array($item['satuan_utama'], ['pcs', 'biji', 'unit', 'buah']);
+                            $stepValue = $isPcs ? "1" : "0.001";
                         @endphp
-                        <div class="flex gap-3 p-3 bg-white rounded-lg group border border-transparent hover:border-slate-200 transition-all">
-                            <div class="flex-1 min-w-0">
-                                <h4 class="font-semibold text-sm text-slate-800 truncate">{{ $item['nama_produk'] }}</h4>
-                                <p class="text-xs {{ $isOwnerRole ? 'text-blue-pro' : 'text-sage' }} font-bold mt-0.5">Rp {{ number_format($item['harga_satuan'], 0, ',', '.') }}</p>
-                            </div>
-                            <div class="flex flex-col items-end justify-between shrink-0">
-                                <button wire:click="hapusItem({{ $index }})" class="text-red-400 hover:text-red-600 transition-colors"><span class="material-symbols-outlined text-[16px]">close</span></button>
-                                <div class="flex items-center gap-1.5 mt-1">
-                                    <!-- FIX: Menghapus debounce.500ms agar hook updatedKeranjang langsung jalan secara real-time, 
-                                         dan menambahkan dynamic step berdasarkan satuan -->
-                                    <input type="number" 
-                                           step="{{ $stepValue }}" 
-                                           min="{{ $stepValue }}"
-                                           wire:model.live="keranjang.{{ $index }}.jumlah" 
-                                           class="w-16 text-center border border-slate-200 rounded-lg text-xs p-1.5 font-bold bg-white focus:ring-1 {{ $isOwnerRole ? 'focus:ring-blue-pro/50 focus:border-blue-pro' : 'focus:ring-sage/50 focus:border-sage' }}">
-                                    <span class="text-[10px] text-slate-400 font-bold uppercase w-8">{{ $item['satuan'] }}</span>
+                        <div class="p-3 bg-white rounded-lg border {{ $item['has_eceran'] ? 'border-amber-200' : 'border-slate-200' }} hover:shadow-sm transition-all relative">
+                            
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="pr-6">
+                                    <h4 class="font-semibold text-sm text-slate-800 leading-tight">{{ $item['nama_produk'] }}</h4>
+                                    <p class="text-xs font-bold mt-1 {{ $isOwnerRole ? 'text-blue-pro' : 'text-sage' }}">Rp {{ number_format($item['harga_terpakai'], 0, ',', '.') }}</p>
                                 </div>
+                                <button wire:click="hapusItem({{ $index }})" class="absolute top-3 right-3 text-red-400 hover:text-red-600 transition-colors"><span class="material-symbols-outlined text-[18px]">close</span></button>
                             </div>
+
+                            {{-- JIKA BARANG MEMILIKI DUAL-UNIT (Bisa dijual per KG atau per METER) --}}
+                            @if($item['has_eceran'])
+                                <div class="bg-amber-50 p-2 rounded-lg border border-amber-100 mb-2">
+                                    <div class="flex gap-2 mb-2">
+                                        <button wire:click="gantiTipeJual({{ $index }}, 'utama')" class="flex-1 text-[10px] font-bold py-1 rounded {{ $item['tipe_jual'] == 'utama' ? 'bg-amber-500 text-white' : 'bg-white text-amber-600 border border-amber-200' }}">JUAL PER {{ strtoupper($item['satuan_utama']) }}</button>
+                                        <button wire:click="gantiTipeJual({{ $index }}, 'eceran')" class="flex-1 text-[10px] font-bold py-1 rounded {{ $item['tipe_jual'] == 'eceran' ? 'bg-amber-500 text-white' : 'bg-white text-amber-600 border border-amber-200' }}">JUAL PER METER</button>
+                                    </div>
+                                    
+                                    <div class="flex items-center gap-2">
+                                        {{-- Input 1: Panjang Meter (Untuk Nota) --}}
+                                        <div class="flex-1">
+                                            <label class="block text-[9px] font-bold text-amber-700 uppercase">Jml Nota ({{ $item['tipe_jual'] == 'eceran' ? 'Meter' : strtoupper($item['satuan_utama']) }})</label>
+                                            <input type="number" step="0.001" min="0.001" wire:model.live="keranjang.{{ $index }}.jumlah_jual" class="w-full text-center border-0 rounded text-xs p-1.5 font-bold bg-white focus:ring-1 focus:ring-amber-500">
+                                        </div>
+                                        <span class="text-amber-300 font-bold mt-4">&rarr;</span>
+                                        {{-- Input 2: Berat Timbangan (Hanya muncul dan bisa diubah jika mode Eceran/Meter) --}}
+                                        <div class="flex-1">
+                                            <label class="block text-[9px] font-bold {{ $item['tipe_jual'] == 'eceran' ? 'text-red-600' : 'text-amber-700' }} uppercase">Potong Fisik ({{ strtoupper($item['satuan_utama']) }})</label>
+                                            <input type="number" step="0.001" min="0.001" wire:model.live="keranjang.{{ $index }}.jumlah_potong_gudang" {{ $item['tipe_jual'] == 'utama' ? 'readonly' : '' }} class="w-full text-center border-0 rounded text-xs p-1.5 font-bold {{ $item['tipe_jual'] == 'eceran' ? 'bg-red-50 text-red-700 ring-1 ring-red-300' : 'bg-amber-100 text-amber-700 opacity-70' }}">
+                                        </div>
+                                    </div>
+                                    @if($item['tipe_jual'] == 'eceran' && $item['jumlah_potong_gudang'] <= 0)
+                                        <p class="text-[9px] text-red-500 font-bold mt-1 italic text-center">Wajib Timbang! Isi fisik yg terpotong.</p>
+                                    @endif
+                                </div>
+                            @else
+                                {{-- INPUT NORMAL UNTUK BARANG BIASA --}}
+                                <div class="flex justify-between items-end mt-2 pt-2 border-t border-slate-100">
+                                    <div class="flex items-center gap-1.5">
+                                        <input type="number" step="{{ $stepValue }}" min="{{ $stepValue }}" wire:model.live="keranjang.{{ $index }}.jumlah_jual" class="w-16 text-center border border-slate-200 rounded-lg text-xs p-1.5 font-bold bg-white focus:ring-1 {{ $isOwnerRole ? 'focus:ring-blue-pro/50 focus:border-blue-pro' : 'focus:ring-sage/50 focus:border-sage' }}">
+                                        <span class="text-[10px] text-slate-400 font-bold uppercase w-8">{{ $item['satuan_utama'] }}</span>
+                                    </div>
+                                </div>
+                            @endif
+
                         </div>
                     @endforeach
                 </div>
@@ -272,7 +328,17 @@
                                 <div class="p-3 flex justify-between items-center">
                                     <div>
                                         <p class="font-semibold text-sm text-slate-800">{{ $item['nama_produk'] }}</p>
-                                        <p class="text-xs text-slate-500">{{ $item['jumlah'] }} {{ $item['satuan'] }} x Rp {{ number_format($item['harga_satuan'], 0, ',', '.') }}</p>
+                                        <p class="text-xs text-slate-500">
+                                            {{ $item['jumlah_jual'] }} {{ $item['tipe_jual'] == 'eceran' ? 'Meter' : strtoupper($item['satuan_utama']) }}
+                                            x Rp {{ number_format($item['harga_terpakai'], 0, ',', '.') }}
+                                        </p>
+                                        {{-- Info potong gudang untuk barang dual-unit yang jual meter --}}
+                                        @if($item['has_eceran'] && $item['tipe_jual'] == 'eceran' && $item['jumlah_potong_gudang'] > 0)
+                                            <span class="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
+                                                <span class="material-symbols-outlined text-[12px]">scale</span>
+                                                Potong Gudang: {{ $item['jumlah_potong_gudang'] }} {{ strtoupper($item['satuan_utama']) }}
+                                            </span>
+                                        @endif
                                     </div>
                                     <p class="font-bold text-slate-800">Rp {{ number_format($item['subtotal'], 0, ',', '.') }}</p>
                                 </div>

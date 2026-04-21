@@ -35,6 +35,9 @@ class ReturPenjualan extends Component
     public $detailTerpilih = null;
     public $qty_retur = 1;
     public $kondisi_retur = 'BAGUS';
+    public $jumlah_potong_gudang_retur = 0; // KG fisik yang dikembalikan (editable oleh admin)
+    public $satuan_pengganti = ''; // Satuan untuk barang pengganti: 'kg', 'meter', 'pcs', dll
+    public $tanggal_retur; // Custom tanggal retur
     
     // State Pencarian Barang Pengganti
     public $search_produk_pengganti = '';
@@ -46,6 +49,7 @@ class ReturPenjualan extends Component
 
     public function mount()
     {
+        $this->tanggal_retur = now()->format('Y-m-d\TH:i');
         $this->filter_tanggal_mulai = Carbon::now()->subDays(7)->format('Y-m-d');
         $this->filter_tanggal_akhir = Carbon::now()->format('Y-m-d');
         
@@ -76,6 +80,21 @@ class ReturPenjualan extends Component
         $this->catatan = '';
         $this->password_admin = '';
         
+        // Pre-populasi KG retur berdasarkan data timbangan saat jual (proporsional untuk 1 unit)
+        $isDualUnit = strtolower($this->detailTerpilih->satuan_saat_jual) === 'meter';
+        if ($isDualUnit) {
+            $kgTotal = $this->detailTerpilih->jumlah_potong_gudang ?? $this->detailTerpilih->jumlah;
+            $meterTotal = $this->detailTerpilih->jumlah;
+            $this->jumlah_potong_gudang_retur = ($meterTotal > 0) ? round($kgTotal / $meterTotal, 3) : 0;
+        } else {
+            $this->jumlah_potong_gudang_retur = 0;
+        }
+
+        // Default satuan pengganti mengikuti satuan nota asli
+        $this->satuan_pengganti = strtolower($this->detailTerpilih->satuan_saat_jual);
+        // Default tanggal retur = sekarang
+        $this->tanggal_retur = now()->format('Y-m-d\TH:i');
+        
         $this->showReturModal = true;
     }
 
@@ -86,27 +105,64 @@ class ReturPenjualan extends Component
         $this->produk_pengganti = null;
     }
 
+    // Recalculate KG proporsional saat admin ubah jumlah retur (meter)
+    public function updatedQtyRetur()
+    {
+        if ($this->detailTerpilih && strtolower($this->detailTerpilih->satuan_saat_jual) === 'meter') {
+            $kgTotal = $this->detailTerpilih->jumlah_potong_gudang ?? $this->detailTerpilih->jumlah;
+            $meterTotal = $this->detailTerpilih->jumlah;
+            $this->jumlah_potong_gudang_retur = ($meterTotal > 0) 
+                ? round(($kgTotal / $meterTotal) * $this->qty_retur, 3) 
+                : 0;
+        }
+    }
+
     public function pilihBarangPengganti($id_produk)
     {
         $this->produk_pengganti = Produk::find($id_produk);
-        $this->search_produk_pengganti = ''; 
+        $this->search_produk_pengganti = '';
+        
+        // Cek apakah pengganti juga punya harga meter (dual-unit)
+        $hasMeter = isset($this->produk_pengganti->metadata['harga_meter']);
+        
+        // Default: ikut satuan nota asli. Jika pengganti tidak punya meter, fallback ke satuan utama produk
+        $satuanAsli = strtolower($this->detailTerpilih->satuan_saat_jual ?? '');
+        if ($satuanAsli === 'meter' && $hasMeter) {
+            $this->satuan_pengganti = 'meter';
+        } else {
+            $this->satuan_pengganti = strtolower($this->produk_pengganti->satuan);
+        }
+    }
+
+    // Hook: saat admin ubah satuan pengganti
+    public function updatedSatuanPengganti()
+    {
+        // Tidak perlu logika tambahan, blade akan auto-recalculate selisih via @php block
     }
 
     public function prosesRetur(ReturnService $returnService)
     {
         $sisaMaksimal = $this->detailTerpilih->jumlah - $this->detailTerpilih->jumlah_diretur;
 
-        $this->validate([
+        $validationRules = [
             'qty_retur' => "required|numeric|min:0.01|max:$sisaMaksimal",
             'kondisi_retur' => 'required|in:BAGUS,RUSAK',
             'catatan' => 'required|string|min:3',
             'password_admin' => 'required',
-        ]);
+        ];
 
-        // BACKEND DOUBLE CHECK: Cegah Retur Desimal di satuan PCS
-        $satuan = strtolower($this->detailTerpilih->produk->satuan);
-        if (in_array($satuan, ['pcs', 'biji', 'unit', 'buah']) && fmod($this->qty_retur, 1) !== 0.0) {
-            $this->addError('qty_retur', "Barang dengan satuan {$satuan} tidak boleh diretur dengan nilai koma (desimal)!");
+        // Tambah validasi KG retur untuk barang dual-unit
+        $isDualUnit = strtolower($this->detailTerpilih->satuan_saat_jual) === 'meter';
+        if ($isDualUnit) {
+            $validationRules['jumlah_potong_gudang_retur'] = 'required|numeric|min:0.001';
+        }
+
+        $this->validate($validationRules);
+
+        // BACKEND DOUBLE CHECK: gunakan satuan_saat_jual (nota), bukan satuan produk
+        $satuanNota = strtolower($this->detailTerpilih->satuan_saat_jual);
+        if (in_array($satuanNota, ['pcs', 'biji', 'unit', 'buah']) && fmod($this->qty_retur, 1) !== 0.0) {
+            $this->addError('qty_retur', "Barang dengan satuan {$satuanNota} tidak boleh diretur dengan nilai koma (desimal)!");
             return;
         }
 
@@ -120,21 +176,34 @@ class ReturPenjualan extends Component
             return;
         }
 
+        // Hitung harga pengganti berdasarkan satuan yang dipilih
+        $hargaPenggantiPerUnit = $this->produk_pengganti->harga_jual_satuan; // default: harga KG/satuan utama
+        if ($this->satuan_pengganti === 'meter' && isset($this->produk_pengganti->metadata['harga_meter'])) {
+            $hargaPenggantiPerUnit = $this->produk_pengganti->metadata['harga_meter'];
+        }
+
         $itemsRetur = [
             [
                 'id_detail_penjualan' => $this->detailTerpilih->id_detail_penjualan,
                 'id_produk_pengganti' => $this->produk_pengganti->id_produk,
                 'jumlah' => $this->qty_retur,
                 'kondisi_barang_dikembalikan' => $this->kondisi_retur,
+                'jumlah_potong_gudang_retur' => $isDualUnit ? $this->jumlah_potong_gudang_retur : null,
+                'satuan_pengganti' => $this->satuan_pengganti,
+                'harga_pengganti_per_unit' => $hargaPenggantiPerUnit,
             ]
         ];
+
+        // Parse tanggal retur custom
+        $tanggalReturParsed = Carbon::parse($this->tanggal_retur);
 
         try {
             $returnService->prosesRetur(
                 $this->notaTerpilih->id_transaksi_penjualan,
                 Auth::id(),
                 $itemsRetur,
-                $this->catatan
+                $this->catatan,
+                $tanggalReturParsed
             );
 
             session()->flash('sukses', 'Proses Retur Berhasil! Mutasi stok & uang telah disesuaikan.');

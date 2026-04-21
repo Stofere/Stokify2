@@ -6,11 +6,13 @@ use Livewire\Component;
 use App\Models\Produk;
 use App\Models\Pelanggan;
 use App\Models\Marketing;
+use App\Models\TransaksiPenjualan;
 use App\Services\TransactionService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Carbon\Carbon;
 
 
 class KasirPos extends Component
@@ -36,8 +38,21 @@ class KasirPos extends Component
     public $catatan = '';
     public $keranjang = []; 
     public $total_belanja = 0;
+    public $tanggal_transaksi; // Custom tanggal transaksi (backdate support)
     
     public $showConfirmModal = false;
+
+    public function mount()
+    {
+        // Default tanggal_transaksi = tanggal dari transaksi terbaru di database
+        // Agar admin yang telat input tidak perlu mengubah tanggal berulang kali
+        $lastTrx = TransaksiPenjualan::latest('tanggal_transaksi')->first();
+        if ($lastTrx) {
+            $this->tanggal_transaksi = Carbon::parse($lastTrx->tanggal_transaksi)->format('Y-m-d\TH:i');
+        } else {
+            $this->tanggal_transaksi = now()->format('Y-m-d\TH:i');
+        }
+    }
 
     // --- FUNGSI PELANGGAN ---
     public function pilihPelanggan($id, $nama)
@@ -95,58 +110,101 @@ class KasirPos extends Component
         $index = collect($this->keranjang)->search(fn($item) => $item['id_produk'] === $idProduk);
 
         if ($index !== false) {
-            $qtyBaru = $this->keranjang[$index]['jumlah'] + 1;
-            if ($produk->lacak_stok && $qtyBaru > $produk->stok_saat_ini) {
-                session()->flash('error', "Stok {$produk->nama_produk} tidak mencukupi!");
-                return;
-            }
-            $this->keranjang[$index]['jumlah'] = $qtyBaru;
-            $this->keranjang[$index]['subtotal'] = $qtyBaru * $this->keranjang[$index]['harga_satuan'];
+            // Jika sudah ada, cukup berikan flash message
+            session()->flash('sukses', "Barang sudah ada di keranjang, silakan ubah jumlahnya.");
         } else {
-            if ($produk->lacak_stok && $produk->stok_saat_ini < 1) {
+            if ($produk->lacak_stok && $produk->stok_saat_ini <= 0) {
                 session()->flash('error', "Stok {$produk->nama_produk} habis!");
                 return;
             }
+            
+            // Cek apakah barang ini punya Harga Meter (Dual Unit)
+            $hasEceran = isset($produk->metadata['harga_meter']);
+
             $this->keranjang[] = [
                 'id_produk' => $produk->id_produk,
                 'nama_produk' => $produk->nama_produk,
-                'satuan' => $produk->satuan,
-                'jumlah' => 1,
-                'harga_satuan' => $produk->harga_jual_satuan,
+                'satuan_utama' => strtolower($produk->satuan),
+                'harga_utama' => $produk->harga_jual_satuan,
+                
+                // Variabel Dual-Unit
+                'has_eceran' => $hasEceran,
+                'harga_eceran' => $hasEceran ? $produk->metadata['harga_meter'] : 0,
+                'tipe_jual' => 'utama', // 'utama' (KG/Pcs) atau 'eceran' (Meter)
+                
+                // Input User
+                'jumlah_jual' => 1, // Angka yang tampil di nota (Bisa Meter / KG)
+                'jumlah_potong_gudang' => 1, // Angka berat fisik yang memotong stok gudang
+                
+                'harga_terpakai' => $produk->harga_jual_satuan,
                 'subtotal' => $produk->harga_jual_satuan,
-                'max_stok' => $produk->stok_saat_ini,
+                'max_stok' => $produk->lacak_stok ? $produk->stok_saat_ini : 999999,
                 'lacak_stok' => $produk->lacak_stok,
             ];
         }
         $this->hitungTotal();
     }
 
+    // FUNGSI BARU: Mengganti Tipe Jual (Tombol Switch KG <-> Meter)
+    public function gantiTipeJual($index, $tipe)
+    {
+        $this->keranjang[$index]['tipe_jual'] = $tipe;
+        
+        if ($tipe === 'eceran') {
+            // Jika pindah ke Meter, ubah harga yang terpakai ke harga meteran
+            $this->keranjang[$index]['harga_terpakai'] = $this->keranjang[$index]['harga_eceran'];
+            // Reset input gudang jadi 0 agar kasir ingat untuk menimbang
+            $this->keranjang[$index]['jumlah_potong_gudang'] = 0; 
+        } else {
+            $this->keranjang[$index]['harga_terpakai'] = $this->keranjang[$index]['harga_utama'];
+            // Jika KG, maka jumlah jual sama dengan jumlah potong gudang
+            $this->keranjang[$index]['jumlah_potong_gudang'] = $this->keranjang[$index]['jumlah_jual'];
+        }
+        
+        $this->kalkulasiBaris($index);
+    }
+
     // FIX: Hook ini otomatis jalan saat user mengetik angka di kolom input keranjang (Reaktivitas Harga)
     public function updatedKeranjang($value, $key)
     {
-        $parts = explode('.', $key); // format: $key = "0.jumlah"
-        if (count($parts) == 2 && $parts[1] == 'jumlah') {
+        $parts = explode('.', $key); // format: $key = "0.jumlah_jual" atau "0.jumlah_potong_gudang"
+        if (count($parts) == 2) {
             $index = $parts[0];
-            $qty = (float) $value;
-            $satuan = $this->keranjang[$index]['satuan'];
+            $field = $parts[1];
+            $val = (float) $value;
+            $satuanUtama = $this->keranjang[$index]['satuan_utama'];
+            $tipeJual = $this->keranjang[$index]['tipe_jual'];
 
-            // BACKEND VALIDASI: Anti Desimal (Cegah 0.1 di Pcs)
-            if (in_array($satuan, ['pcs', 'biji', 'unit', 'buah'])) {
-                $qty = floor($qty); // Paksa buang desimalnya
-                $this->keranjang[$index]['jumlah'] = $qty; // Update kembali ke UI
+            // ANTI DESIMAL UNTUK PCS
+            if (in_array($satuanUtama, ['pcs', 'biji', 'unit', 'buah'])) {
+                $val = floor($val);
+            }
+            
+            $this->keranjang[$index][$field] = $val;
+
+            // Jika jual "Utama" (KG), maka jumlah potong gudang harus ngikut jumlah jual
+            if ($tipeJual === 'utama' && $field === 'jumlah_jual') {
+                $this->keranjang[$index]['jumlah_potong_gudang'] = $val;
             }
 
-            // Validasi Maksimal Stok di UI
-            if ($this->keranjang[$index]['lacak_stok'] && $qty > $this->keranjang[$index]['max_stok']) {
-                $qty = $this->keranjang[$index]['max_stok'];
-                $this->keranjang[$index]['jumlah'] = $qty;
-                session()->flash('error', "Stok tidak mencukupi! Maksimal: " . $qty);
-            }
-
-            // Update subtotal dan total uang
-            $this->keranjang[$index]['subtotal'] = $qty * $this->keranjang[$index]['harga_satuan'];
-            $this->hitungTotal();
+            $this->kalkulasiBaris($index);
         }
+    }
+
+    private function kalkulasiBaris($index)
+    {
+        $item = $this->keranjang[$index];
+
+        // Validasi Maksimal Stok (Berdasarkan jumlah pemotong gudang fisik)
+        if ($item['lacak_stok'] && $item['jumlah_potong_gudang'] > $item['max_stok']) {
+            $this->keranjang[$index]['jumlah_potong_gudang'] = $item['max_stok'];
+            session()->flash('error', "Stok gudang tidak mencukupi! Maksimal: " . $item['max_stok'] . " " . $item['satuan_utama']);
+        }
+
+        // Subtotal selalu dihitung dari jumlah jual (Meter / KG) dikali harga terpakai
+        $this->keranjang[$index]['subtotal'] = $this->keranjang[$index]['jumlah_jual'] * $item['harga_terpakai'];
+        
+        $this->hitungTotal();
     }
 
     public function hapusItem(int $index)
@@ -188,10 +246,16 @@ class KasirPos extends Component
             $this->marketingTerpilihNama = Marketing::find($this->id_marketing)->nama;
         }
 
-        // DOUBLE CHECK BACKEND: mencegah if website nya ngebug masih bisa masukin desimal ke satuan selain meter,kg
+        // DOUBLE CHECK BACKEND: mencegah desimal di satuan PCS + validasi timbangan wajib untuk jual meter
         foreach ($this->keranjang as $item) {
-            if (in_array($item['satuan'], ['pcs', 'biji', 'unit', 'buah']) && fmod($item['jumlah'], 1) !== 0.0) {
+            if (in_array($item['satuan_utama'], ['pcs', 'biji', 'unit', 'buah']) && fmod($item['jumlah_jual'], 1) !== 0.0) {
                 $this->addError('checkout', "Barang {$item['nama_produk']} satuannya Pcs, tidak boleh ada koma/desimal!");
+                return;
+            }
+
+            // Jika jual meter tapi belum ditimbang → tolak
+            if ($item['has_eceran'] && $item['tipe_jual'] === 'eceran' && $item['jumlah_potong_gudang'] <= 0) {
+                $this->addError('checkout', "Barang {$item['nama_produk']} dijual per Meter, wajib isi berat timbangan (KG)!");
                 return;
             }
         }
@@ -225,6 +289,7 @@ class KasirPos extends Component
                         'id_pelanggan' => $id_pelanggan_final,
                         'id_marketing' => $this->id_marketing,
                         'catatan' => $this->catatan,
+                        'tanggal_transaksi' => Carbon::parse($this->tanggal_transaksi),
                     ];
 
                     // Lempar ke otak bisnis untuk diproses
@@ -234,12 +299,15 @@ class KasirPos extends Component
 
                     session()->flash('sukses', "Transaksi berhasil! Nomor Nota: " . $nota->kode_nota);
                     
-                    // Reset seluruh State
+                    // Reset seluruh State (tapi pertahankan tanggal_transaksi untuk batch input)
+                    $tanggalSebelumnya = $this->tanggal_transaksi;
                     $this->reset([
                         'keranjang', 'total_belanja', 'catatan', 'keyword', 'showConfirmModal',
                         'id_pelanggan', 'pelangganTerpilihNama', 'searchPelanggan', 'is_pelanggan_baru', 'pelanggan_baru_nama', 'pelanggan_baru_telepon', 'pelanggan_baru_alamat',
                         'id_marketing', 'marketingTerpilihNama', 'searchMarketing'
                     ]);
+                    // Restore tanggal ke yang terakhir dipakai agar batch input cepat
+                    $this->tanggal_transaksi = $tanggalSebelumnya;
 
                 } catch (Exception $e) {
                     DB::rollBack(); // Batalkan pembuatan pelanggan & nota jika ada yang error (misal stok tiba-tiba habis)

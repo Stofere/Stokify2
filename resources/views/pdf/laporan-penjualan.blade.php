@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>Laporan Penjualan</title>
     <style>
         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #333; line-height: 1.4; }
@@ -84,15 +85,20 @@
                                 @foreach($daftarJejakRetur as $jejak)
                                     <div class="retur-box">
                                         <span class="retur-title">Diretur pada: {{ $jejak['nota_retur']->tanggal_retur->format('d/m/Y') }}</span>
-                                        Kembali: <strong>{{ fmod($jejak['detail']->jumlah, 1) == 0 ? (int)$jejak['detail']->jumlah : $jejak['detail']->jumlah }} qty</strong> ({{ $jejak['detail']->kondisi_barang_dikembalikan }})<br>
-                                        Ganti dgn: <strong>{{ $jejak['detail']->produkPengganti->nama_produk }}</strong>
+                                        Kembali: <strong>{{ fmod($jejak['detail']->jumlah, 1) == 0 ? (int)$jejak['detail']->jumlah : $jejak['detail']->jumlah }} {{ strtoupper($det->satuan_saat_jual) }}</strong> ({{ $jejak['detail']->kondisi_barang_dikembalikan }})<br>
+                                        Ganti dgn: <strong>{{ $jejak['detail']->produkPengganti->nama_produk }}</strong> ({{ fmod($jejak['detail']->jumlah, 1) == 0 ? (int)$jejak['detail']->jumlah : $jejak['detail']->jumlah }} {{ strtoupper($det->satuan_saat_jual) }})
                                         <span class="retur-note">"{{ $jejak['nota_retur']->catatan ?? 'Tanpa catatan' }}"</span>
                                     </div>
                                 @endforeach
                             @endif
                         </td>
-                        <td class="text-center">{{ fmod($det->jumlah, 1) == 0 ? (int)$det->jumlah : $det->jumlah }} {{ $det->satuan_saat_jual }}</td>
-                        <td class="text-right">Rp {{ number_format($det->harga_satuan, 0, ',', '.') }}</td>
+                        <td class="text-center">
+                            {{ fmod($det->jumlah, 1) == 0 ? (int)$det->jumlah : $det->jumlah }} {{ strtoupper($det->satuan_saat_jual) }}
+                            @if(strtolower($det->satuan_saat_jual) === 'meter' && $det->jumlah_potong_gudang)
+                                <br><span style="font-size: 8px; color: #d35400;">⚖ {{ $det->jumlah_potong_gudang }} KG</span>
+                            @endif
+                        </td>
+                        <td class="text-right">Rp {{ number_format($det->harga_satuan, 0, ',', '.') }}<br><span style="font-size: 8px; color: #7f8c8d;">/{{ $det->satuan_saat_jual }}</span></td>
                         <td class="text-right">Rp {{ number_format($det->subtotal, 0, ',', '.') }}</td>
                     </tr>
                     @endforeach

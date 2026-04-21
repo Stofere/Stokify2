@@ -178,8 +178,8 @@
                                             @forelse($daftarJejakRetur as $jejak)
                                                 <div class="mt-2 bg-orange-50 border border-orange-200 rounded p-3 text-xs shadow-sm relative">
                                                     <span class="text-orange-700 font-black block mb-1 uppercase tracking-wider text-[10px]">⚠️ Diretur: {{ $jejak['nota_retur']->tanggal_retur->format('d/m/Y H:i') }}</span>
-                                                    <span class="text-gray-700 block mb-1">Dikembalikan <strong class="text-red-600">{{ fmod($jejak['detail']->jumlah, 1) == 0 ? (int)$jejak['detail']->jumlah : $jejak['detail']->jumlah }} qty</strong> (Kondisi: {{ $jejak['detail']->kondisi_barang_dikembalikan }})</span>
-                                                    <span class="text-gray-700 block mb-1">Diganti dgn: <strong class="text-green-700">{{ $jejak['detail']->produkPengganti->nama_produk }}</strong></span>
+                                                    <span class="text-gray-700 block mb-1">Dikembalikan <strong class="text-red-600">{{ fmod($jejak['detail']->jumlah, 1) == 0 ? (int)$jejak['detail']->jumlah : $jejak['detail']->jumlah }} {{ strtoupper($det->satuan_saat_jual) }}</strong> (Kondisi: {{ $jejak['detail']->kondisi_barang_dikembalikan }})</span>
+                                                    <span class="text-gray-700 block mb-1">Diganti dgn: <strong class="text-green-700">{{ $jejak['detail']->produkPengganti->nama_produk }}</strong> ({{ fmod($jejak['detail']->jumlah, 1) == 0 ? (int)$jejak['detail']->jumlah : $jejak['detail']->jumlah }} {{ strtoupper($det->satuan_saat_jual) }})</span>
                                                     
                                                     <span class="block bg-white p-1.5 rounded border border-orange-100 text-gray-600 italic mt-1.5">
                                                         "{{ $jejak['nota_retur']->catatan ?? 'Tanpa catatan' }}"
@@ -190,8 +190,13 @@
                                             @endforelse
                                         @endif
                                     </td>
-                                    <td class="p-3 text-center align-top pt-4">{{ fmod($det->jumlah, 1) == 0 ? (int)$det->jumlah : $det->jumlah }} {{ $det->satuan_saat_jual }}</td>
-                                    <td class="p-3 text-right text-gray-600 align-top pt-4">Rp {{ number_format($det->harga_satuan, 0, ',', '.') }}</td>
+                                    <td class="p-3 text-center align-top pt-4">
+                                        {{ fmod($det->jumlah, 1) == 0 ? (int)$det->jumlah : $det->jumlah }} {{ strtoupper($det->satuan_saat_jual) }}
+                                        @if(strtolower($det->satuan_saat_jual) === 'meter' && $det->jumlah_potong_gudang)
+                                            <span class="block text-[9px] text-amber-600 font-bold mt-0.5">⚖️ {{ $det->jumlah_potong_gudang }} KG</span>
+                                        @endif
+                                    </td>
+                                    <td class="p-3 text-right text-gray-600 align-top pt-4">Rp {{ number_format($det->harga_satuan, 0, ',', '.') }}<span class="text-[9px] text-gray-400 block">/{{ $det->satuan_saat_jual }}</span></td>
                                     <td class="p-3 text-right font-bold text-green-700 align-top pt-4">Rp {{ number_format($det->subtotal, 0, ',', '.') }}</td>
                                 </tr>
                             @endforeach

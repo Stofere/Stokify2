@@ -126,10 +126,10 @@
                             @php $sisaBisaDiretur = $detail->jumlah - $detail->jumlah_diretur; @endphp
                             <tr class="{{ $sisaBisaDiretur <= 0 ? 'opacity-40' : '' }} {{ $isOwnerRole ? 'hover:bg-slate-50 border-b border-slate-50' : 'hover:bg-sage-light/20 border-b border-sage/5' }} transition-colors">
                                 <td class="p-4 font-semibold text-slate-700">{{ $detail->produk->nama_produk }}</td>
-                                <td class="p-4 text-center text-slate-600 font-semibold">{{ fmod($detail->jumlah, 1) == 0 ? (int)$detail->jumlah : $detail->jumlah }}</td>
+                                <td class="p-4 text-center text-slate-600 font-semibold">{{ fmod($detail->jumlah, 1) == 0 ? (int)$detail->jumlah : $detail->jumlah }} {{ strtoupper($detail->satuan_saat_jual) }}</td>
                                 <td class="p-4 text-center font-bold text-red-500">{{ fmod($detail->jumlah_diretur, 1) == 0 ? (int)$detail->jumlah_diretur : $detail->jumlah_diretur }}</td>
-                                <td class="p-4 text-center font-bold text-emerald-600">{{ fmod($sisaBisaDiretur, 1) == 0 ? (int)$sisaBisaDiretur : $sisaBisaDiretur }}</td>
-                                <td class="p-4 text-right text-slate-600 font-semibold">Rp {{ number_format($detail->harga_satuan, 0, ',', '.') }}</td>
+                                <td class="p-4 text-center font-bold text-emerald-600">{{ fmod($sisaBisaDiretur, 1) == 0 ? (int)$sisaBisaDiretur : $sisaBisaDiretur }} {{ strtoupper($detail->satuan_saat_jual) }}</td>
+                                <td class="p-4 text-right text-slate-600 font-semibold">Rp {{ number_format($detail->harga_satuan, 0, ',', '.') }}<span class="text-[9px] text-slate-400 block">/{{ $detail->satuan_saat_jual }}</span></td>
                                 <td class="p-4 text-center">
                                     @if($sisaBisaDiretur > 0)
                                         <button wire:click="bukaModalRetur({{ $detail->id_detail_penjualan }})"
@@ -154,7 +154,17 @@
     @if($showReturModal && $detailTerpilih && $produk_pengganti)
         @php
             $sisaMaksimal = $detailTerpilih->jumlah - $detailTerpilih->jumlah_diretur;
-            $selisihSatuan = $produk_pengganti->harga_jual_satuan - $detailTerpilih->harga_satuan;
+            $isDualUnitRetur = strtolower($detailTerpilih->satuan_saat_jual) === 'meter';
+            
+            // Hitung harga pengganti berdasarkan satuan yang dipilih
+            $hargaPenggantiDisplay = $produk_pengganti->harga_jual_satuan;
+            $satuanPenggantiDisplay = strtoupper($produk_pengganti->satuan);
+            if ($satuan_pengganti === 'meter' && isset($produk_pengganti->metadata['harga_meter'])) {
+                $hargaPenggantiDisplay = $produk_pengganti->metadata['harga_meter'];
+                $satuanPenggantiDisplay = 'METER';
+            }
+            
+            $selisihSatuan = $hargaPenggantiDisplay - $detailTerpilih->harga_satuan;
             $totalSelisih = $selisihSatuan * (float)($qty_retur ?: 0);
         @endphp
 
@@ -172,14 +182,17 @@
 
                     <div class="mb-5 bg-white p-4 rounded-xl shadow-sm">
                         <p class="font-headline text-lg font-bold {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }} leading-tight">{{ $detailTerpilih->produk->nama_produk }}</p>
-                        <p class="text-sm text-slate-500 mt-1 font-semibold">Harga Nota: <span class="{{ $isOwnerRole ? 'text-blue-pro' : 'text-sage' }}">Rp {{ number_format($detailTerpilih->harga_satuan, 0, ',', '.') }}</span></p>
+                        <p class="text-sm text-slate-500 mt-1 font-semibold">Harga Nota: <span class="{{ $isOwnerRole ? 'text-blue-pro' : 'text-sage' }}">Rp {{ number_format($detailTerpilih->harga_satuan, 0, ',', '.') }}</span> <span class="text-[10px] text-slate-400">/{{ $detailTerpilih->satuan_saat_jual }}</span></p>
+                        @if($isDualUnitRetur && $detailTerpilih->jumlah_potong_gudang)
+                            <p class="text-[10px] text-amber-600 font-bold mt-1 bg-amber-50 px-2 py-0.5 rounded inline-block">📦 Timbangan saat jual: {{ $detailTerpilih->jumlah_potong_gudang }} KG untuk {{ $detailTerpilih->jumlah }} Meter</p>
+                        @endif
                     </div>
 
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Jumlah Diretur</label>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Jumlah Diretur ({{ strtoupper($detailTerpilih->satuan_saat_jual) }})</label>
                             @php
-                                $isPcsRetur = in_array(strtolower($detailTerpilih->produk->satuan), ['pcs', 'biji', 'unit', 'buah']);
+                                $isPcsRetur = in_array(strtolower($detailTerpilih->satuan_saat_jual), ['pcs', 'biji', 'unit', 'buah']);
                                 $stepRetur = $isPcsRetur ? "1" : "0.01";
                             @endphp
                             <input wire:model.live="qty_retur" 
@@ -188,7 +201,7 @@
                                    max="{{ $sisaMaksimal }}" 
                                    step="{{ $stepRetur }}" 
                                    class="w-full border-gray-300 rounded-lg px-3 py-2 bg-white font-bold focus:ring-yellow-500 text-lg">
-                            <p class="text-[11px] text-red-500 mt-1 font-bold">Batas Maksimal: {{ fmod($sisaMaksimal, 1) == 0 ? (int)$sisaMaksimal : $sisaMaksimal }}</p>
+                            <p class="text-[11px] text-red-500 mt-1 font-bold">Batas Maksimal: {{ fmod($sisaMaksimal, 1) == 0 ? (int)$sisaMaksimal : $sisaMaksimal }} {{ strtoupper($detailTerpilih->satuan_saat_jual) }}</p>
                             @error('qty_retur') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                         </div>
                         <div>
@@ -199,6 +212,18 @@
                             </select>
                         </div>
                     </div>
+
+                    {{-- INPUT KG RETUR (Hanya untuk barang dual-unit / Meter) --}}
+                    @if($isDualUnitRetur)
+                        <div class="bg-red-50 p-3 rounded-lg border border-red-200 mb-2">
+                            <label class="block text-[10px] font-bold text-red-600 uppercase tracking-wider mb-1">⚖️ Berat Timbangan Kembali (KG)</label>
+                            <p class="text-[9px] text-red-500 mb-2">Default: proporsional dari timbangan saat jual. Ubah jika admin menimbang ulang.</p>
+                            <input wire:model.live="jumlah_potong_gudang_retur" 
+                                   type="number" step="0.001" min="0.001"
+                                   class="w-full border-red-300 rounded-lg px-3 py-2 bg-white font-bold text-red-700 text-lg focus:ring-red-500">
+                            @error('jumlah_potong_gudang_retur') <span class="text-red-500 text-xs font-bold">{{ $message }}</span> @enderror
+                        </div>
+                    @endif
                 </div>
 
                 {{-- RIGHT: REPLACEMENT ITEM --}}
@@ -230,15 +255,34 @@
                         </div>
 
                         {{-- Selected Replacement --}}
-                        <div class="bg-slate-50 p-4 rounded-xl mb-4 flex justify-between items-center">
-                            <div>
-                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Akan Diberikan:</p>
-                                <p class="font-headline font-bold {{ $isOwnerRole ? 'text-blue-pro' : 'text-sage-dark' }} leading-tight">{{ $produk_pengganti->nama_produk }}</p>
+                        <div class="bg-slate-50 p-4 rounded-xl mb-4">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Akan Diberikan:</p>
+                                    <p class="font-headline font-bold {{ $isOwnerRole ? 'text-blue-pro' : 'text-sage-dark' }} leading-tight">{{ $produk_pengganti->nama_produk }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-headline text-xl font-bold text-slate-700">Rp {{ number_format($hargaPenggantiDisplay, 0, ',', '.') }}</p>
+                                    <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">per {{ $satuanPenggantiDisplay }}</p>
+                                </div>
                             </div>
-                            <div class="text-right">
-                                <p class="font-headline text-xl font-bold text-slate-700">Rp {{ number_format($produk_pengganti->harga_jual_satuan, 0, ',', '.') }}</p>
-                                <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">per satuan</p>
-                            </div>
+
+                            {{-- Toggle KG / Meter untuk pengganti (hanya jika pengganti punya harga_meter) --}}
+                            @if(isset($produk_pengganti->metadata['harga_meter']))
+                                <div class="mt-3 pt-3 border-t border-slate-200">
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Satuan Pengganti</p>
+                                    <div class="flex gap-2">
+                                        <button type="button" wire:click="$set('satuan_pengganti', '{{ strtolower($produk_pengganti->satuan) }}')"
+                                                class="flex-1 py-2 rounded-lg text-xs font-bold transition-all {{ $satuan_pengganti !== 'meter' ? ($isOwnerRole ? 'bg-blue-pro text-white' : 'bg-sage-dark text-white') : 'bg-white text-slate-500 border border-slate-200' }}">
+                                            {{ strtoupper($produk_pengganti->satuan) }} — Rp {{ number_format($produk_pengganti->harga_jual_satuan, 0, ',', '.') }}
+                                        </button>
+                                        <button type="button" wire:click="$set('satuan_pengganti', 'meter')"
+                                                class="flex-1 py-2 rounded-lg text-xs font-bold transition-all {{ $satuan_pengganti === 'meter' ? ($isOwnerRole ? 'bg-blue-pro text-white' : 'bg-sage-dark text-white') : 'bg-white text-slate-500 border border-slate-200' }}">
+                                            METER — Rp {{ number_format($produk_pengganti->metadata['harga_meter'], 0, ',', '.') }}
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
 
                         {{-- Price Difference --}}
@@ -256,6 +300,11 @@
 
                     {{-- Execute Section --}}
                     <form wire:submit="prosesRetur" class="border-t border-slate-100 pt-4 mt-auto">
+                        <div class="mb-3">
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Tanggal & Waktu Retur</label>
+                            <input wire:model="tanggal_retur" type="datetime-local" 
+                                   class="w-full border-0 rounded-lg px-3 py-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }} font-semibold">
+                        </div>
                         <div class="mb-3">
                             <input wire:model="catatan" type="text" placeholder="Catatan Wajib (Cth: Speaker sobek minta tukar)" required
                                    class="w-full border-0 rounded-lg px-3 py-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }}">

@@ -34,55 +34,61 @@ class TransactionService
                 'id_marketing' => $dataNota['id_marketing'] ?? null,
                 'total_harga' => 0, // Akan diupdate di akhir
                 'status_penjualan' => 'SELESAI',
-                'tanggal_transaksi' => now(),
+                'tanggal_transaksi' => $dataNota['tanggal_transaksi'] ?? now(),
                 'catatan' => $dataNota['catatan'] ?? null,
             ]);
 
             // 2. Proses tiap item di keranjang
             foreach ($keranjang as $item) {
-                // KUNCI PENTING: Cegah Race Condition 2 Kasir
                 $produk = Produk::lockForUpdate()->find($item['id_produk']);
 
                 if (!$produk) {
                     throw new Exception("Produk tidak ditemukan di database.");
                 }
 
-                // Cek stok khusus barang yang di-track stoknya
-                if ($produk->lacak_stok && $produk->stok_saat_ini < $item['jumlah']) {
+                // Cek stok berdasarkan berat fisik timbangan (potong_gudang)
+                if ($produk->lacak_stok && $produk->stok_saat_ini < $item['jumlah_potong_gudang']) {
                     throw new Exception("Stok produk {$produk->nama_produk} tidak mencukupi. Sisa: {$produk->stok_saat_ini}");
                 }
 
-                $subtotal = $item['jumlah'] * $item['harga_satuan'];
+                $subtotal = $item['subtotal']; // Sudah dihitung di Livewire
                 $totalHarga += $subtotal;
 
                 $stokSebelum = $produk->stok_saat_ini;
-                $stokSesudah = $stokSebelum - $item['jumlah'];
+                $stokSesudah = $stokSebelum - $item['jumlah_potong_gudang'];
 
-                // Kurangi stok jika produk dilacak
                 if ($produk->lacak_stok) {
                     $produk->update(['stok_saat_ini' => $stokSesudah]);
                 }
 
-                // Simpan baris detail nota
+                // LOGIKA CERDAS UNTUK NOTA:
+                // Jika jual eceran (Meter), satuannya ditulis "Meter", tapi harganya harga meter.
+                // Jika jual utama (KG), satuannya ditulis "KG".
+                $satuanNota = $item['tipe_jual'] === 'eceran' ? 'meter' : $produk->satuan;
+                
                 DetailPenjualan::create([
                     'id_transaksi_penjualan' => $transaksi->id_transaksi_penjualan,
                     'id_produk' => $produk->id_produk,
-                    'jumlah' => $item['jumlah'],
-                    'satuan_saat_jual' => $produk->satuan,
-                    'harga_satuan' => $item['harga_satuan'],
+                    'jumlah' => $item['jumlah_jual'], // Angka yang tampil di nota
+                    'jumlah_potong_gudang' => $item['jumlah_potong_gudang'], // KG fisik yang dipotong dari gudang
+                    'satuan_saat_jual' => $satuanNota,
+                    'harga_satuan' => $item['harga_terpakai'],
                     'subtotal' => $subtotal,
                 ]);
 
-                // Catat mutasi stok keluar
+                // RIWAYAT STOK (CCTV):
+                // Harus mencatat mutasi fisik (KG), namun dengan keterangan bahwa ini terjual meter.
+                $ketTambahan = $item['tipe_jual'] === 'eceran' ? " (Terjual {$item['jumlah_jual']} Meter)" : "";
+                
                 RiwayatStok::create([
                     'id_produk' => $produk->id_produk,
                     'user_id' => $userId,
                     'id_transaksi_penjualan' => $transaksi->id_transaksi_penjualan,
                     'tipe' => 'KELUAR',
-                    'jumlah' => $item['jumlah'],
+                    'jumlah' => $item['jumlah_potong_gudang'], // Memotong fisik aktual
                     'stok_sebelum' => $stokSebelum,
                     'stok_sesudah' => $stokSesudah,
-                    'keterangan' => "Penjualan No: " . $transaksi->kode_nota,
+                    'keterangan' => "Penjualan No: " . $transaksi->kode_nota . $ketTambahan,
                 ]);
             }
 

@@ -15,6 +15,7 @@ class DetailPenjualan extends Model
         'id_transaksi_penjualan',
         'id_produk',
         'jumlah',
+        'jumlah_potong_gudang',
         'jumlah_diretur',
         'satuan_saat_jual',
         'harga_satuan',
@@ -23,6 +24,7 @@ class DetailPenjualan extends Model
 
     protected $casts = [
         'jumlah' => 'decimal:3',
+        'jumlah_potong_gudang' => 'decimal:3',
         'jumlah_diretur' => 'decimal:3',
         'harga_satuan' => 'decimal:2',
         'subtotal' => 'decimal:2',
