@@ -236,7 +236,13 @@ class ProdukIndex extends Component
             'keterangan_adjust' => 'required|string|min:5',
         ]);
 
-        // Cek logis agar KOREKSI_MINUS tidak melebihi stok yang ada
+        // BACKEND DOUBLE CHECK: Cegah mutasi desimal di satuan PCS
+        $satuan = strtolower($this->produk_stok_aktif->satuan);
+        if (in_array($satuan, ['pcs', 'biji', 'unit', 'buah']) && fmod($this->jumlah_adjust, 1) !== 0.0) {
+            $this->addError('jumlah_adjust', "Barang dengan satuan {$satuan} tidak boleh memiliki nilai koma (desimal)!");
+            return;
+        }
+
         if ($this->tipe_penyesuaian === 'KOREKSI_MINUS' && $this->jumlah_adjust > $this->produk_stok_aktif->stok_saat_ini) {
             $this->addError('jumlah_adjust', "Jumlah keluar melebihi batas stok! Maksimal: " . $this->produk_stok_aktif->stok_saat_ini);
             return;

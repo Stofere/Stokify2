@@ -289,9 +289,17 @@
                             @error('tipe_penyesuaian') <span class="text-red-500 text-xs font-semibold">{{ $message }}</span> @enderror
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Jumlah ({{ $produk_stok_aktif->satuan }})</label>
-                            <input type="number" step="0.01" wire:model="jumlah_adjust" class="w-full border-0 rounded-lg p-2.5 text-sm bg-white shadow-sm font-bold text-center text-lg">
-                            @error('jumlah_adjust') <span class="text-red-500 text-xs font-semibold">{{ $message }}</span> @enderror
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Jumlah Fisik Mutasi ({{ $produk_stok_aktif->satuan }})</label>
+                            @php
+                                $isPcsMutasi = in_array(strtolower($produk_stok_aktif->satuan), ['pcs', 'biji', 'unit', 'buah']);
+                                $stepMutasi = $isPcsMutasi ? "1" : "0.01";
+                            @endphp
+                            <input type="number" 
+                                   step="{{ $stepMutasi }}" 
+                                   min="{{ $stepMutasi }}"
+                                   wire:model="jumlah_adjust" 
+                                   class="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-indigo-500 text-lg font-bold text-center">
+                            @error('jumlah_adjust') <span class="text-red-500 text-xs font-bold">{{ $message }}</span> @enderror
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Keterangan Wajib</label>

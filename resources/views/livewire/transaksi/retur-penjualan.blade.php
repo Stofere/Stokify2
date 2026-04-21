@@ -175,13 +175,21 @@
                         <p class="text-sm text-slate-500 mt-1 font-semibold">Harga Nota: <span class="{{ $isOwnerRole ? 'text-blue-pro' : 'text-sage' }}">Rp {{ number_format($detailTerpilih->harga_satuan, 0, ',', '.') }}</span></p>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1">Jumlah Retur</label>
-                            <input wire:model.live="qty_retur" type="number" min="0.01" max="{{ $sisaMaksimal }}" step="0.01"
-                                   class="w-full border-0 rounded-lg px-3 py-2.5 bg-white font-bold text-lg shadow-sm focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }}">
-                            <p class="text-[10px] text-red-500 mt-1 font-bold">Maks: {{ fmod($sisaMaksimal, 1) == 0 ? (int)$sisaMaksimal : $sisaMaksimal }}</p>
-                            @error('qty_retur') <span class="text-red-500 text-xs font-semibold">{{ $message }}</span> @enderror
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Jumlah Diretur</label>
+                            @php
+                                $isPcsRetur = in_array(strtolower($detailTerpilih->produk->satuan), ['pcs', 'biji', 'unit', 'buah']);
+                                $stepRetur = $isPcsRetur ? "1" : "0.01";
+                            @endphp
+                            <input wire:model.live="qty_retur" 
+                                   type="number" 
+                                   min="{{ $stepRetur }}" 
+                                   max="{{ $sisaMaksimal }}" 
+                                   step="{{ $stepRetur }}" 
+                                   class="w-full border-gray-300 rounded-lg px-3 py-2 bg-white font-bold focus:ring-yellow-500 text-lg">
+                            <p class="text-[11px] text-red-500 mt-1 font-bold">Batas Maksimal: {{ fmod($sisaMaksimal, 1) == 0 ? (int)$sisaMaksimal : $sisaMaksimal }}</p>
+                            @error('qty_retur') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-500 mb-1">Kondisi Fisik</label>

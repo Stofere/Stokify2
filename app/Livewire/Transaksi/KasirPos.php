@@ -121,6 +121,34 @@ class KasirPos extends Component
         $this->hitungTotal();
     }
 
+    // FIX: Hook ini otomatis jalan saat user mengetik angka di kolom input keranjang (Reaktivitas Harga)
+    public function updatedKeranjang($value, $key)
+    {
+        $parts = explode('.', $key); // format: $key = "0.jumlah"
+        if (count($parts) == 2 && $parts[1] == 'jumlah') {
+            $index = $parts[0];
+            $qty = (float) $value;
+            $satuan = $this->keranjang[$index]['satuan'];
+
+            // BACKEND VALIDASI: Anti Desimal (Cegah 0.1 di Pcs)
+            if (in_array($satuan, ['pcs', 'biji', 'unit', 'buah'])) {
+                $qty = floor($qty); // Paksa buang desimalnya
+                $this->keranjang[$index]['jumlah'] = $qty; // Update kembali ke UI
+            }
+
+            // Validasi Maksimal Stok di UI
+            if ($this->keranjang[$index]['lacak_stok'] && $qty > $this->keranjang[$index]['max_stok']) {
+                $qty = $this->keranjang[$index]['max_stok'];
+                $this->keranjang[$index]['jumlah'] = $qty;
+                session()->flash('error', "Stok tidak mencukupi! Maksimal: " . $qty);
+            }
+
+            // Update subtotal dan total uang
+            $this->keranjang[$index]['subtotal'] = $qty * $this->keranjang[$index]['harga_satuan'];
+            $this->hitungTotal();
+        }
+    }
+
     public function hapusItem(int $index)
     {
         unset($this->keranjang[$index]);
@@ -160,6 +188,14 @@ class KasirPos extends Component
             $this->marketingTerpilihNama = Marketing::find($this->id_marketing)->nama;
         }
 
+        // DOUBLE CHECK BACKEND: mencegah if website nya ngebug masih bisa masukin desimal ke satuan selain meter,kg
+        foreach ($this->keranjang as $item) {
+            if (in_array($item['satuan'], ['pcs', 'biji', 'unit', 'buah']) && fmod($item['jumlah'], 1) !== 0.0) {
+                $this->addError('checkout', "Barang {$item['nama_produk']} satuannya Pcs, tidak boleh ada koma/desimal!");
+                return;
+            }
+        }
+
         $this->showConfirmModal = true;
     }
 
@@ -169,7 +205,7 @@ class KasirPos extends Component
 
         if ($lock->get()) {
             try {
-                // PENCEGAHAN SPAM: Gunakan DB Transaction agar pembuatan Pelanggan & Nota berjalan dalam 1 antrean aman
+                // PENCEGAHAN SPAM: Menggunakan DB Transaction agar pembuatan Pelanggan & Nota berjalan dalam 1 antrean aman
                 DB::beginTransaction();
                 try {
                     $id_pelanggan_final = $this->id_pelanggan;
@@ -233,15 +269,23 @@ class KasirPos extends Component
         }
 
         // 2. Pencarian Cepat Pelanggan
+        // FIX: Pencarian Cepat (Dibuat lebih ringan & tanpa debounce di blade nanti)
         $hasilPelanggan = collect();
         if (strlen($this->searchPelanggan) > 0) {
-            $hasilPelanggan = Pelanggan::where('aktif', true)->where('nama', 'like', '%' . $this->searchPelanggan . '%')->limit(5)->get();
+            // Pencarian di memory database yang ringan
+            $hasilPelanggan = Pelanggan::where('aktif', true)->where('nama', 'like', $this->searchPelanggan . '%')->limit(5)->get();
+            if($hasilPelanggan->count() < 5) {
+                $hasilPelanggan = $hasilPelanggan->merge(Pelanggan::where('aktif', true)->where('nama', 'like', '%' . $this->searchPelanggan . '%')->limit(5 - $hasilPelanggan->count())->get())->unique('id_pelanggan');
+            }
         }
 
         // 3. Pencarian Cepat Marketing (Hanya mencari yang sudah ada)
         $hasilMarketing = collect();
         if (strlen($this->searchMarketing) > 0) {
-            $hasilMarketing = Marketing::where('aktif', true)->where('nama', 'like', '%' . $this->searchMarketing . '%')->limit(5)->get();
+            $hasilMarketing = Marketing::where('aktif', true)->where('nama', 'like', $this->searchMarketing . '%')->limit(5)->get();
+            if($hasilMarketing->count() < 5) {
+                $hasilMarketing = $hasilMarketing->merge(Marketing::where('aktif', true)->where('nama', 'like', '%' . $this->searchMarketing . '%')->limit(5 - $hasilMarketing->count())->get())->unique('id_marketing');
+            }
         }
 
         return view('livewire.transaksi.kasir-pos', [

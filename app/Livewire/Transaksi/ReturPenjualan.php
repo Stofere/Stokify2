@@ -103,6 +103,13 @@ class ReturPenjualan extends Component
             'password_admin' => 'required',
         ]);
 
+        // BACKEND DOUBLE CHECK: Cegah Retur Desimal di satuan PCS
+        $satuan = strtolower($this->detailTerpilih->produk->satuan);
+        if (in_array($satuan, ['pcs', 'biji', 'unit', 'buah']) && fmod($this->qty_retur, 1) !== 0.0) {
+            $this->addError('qty_retur', "Barang dengan satuan {$satuan} tidak boleh diretur dengan nilai koma (desimal)!");
+            return;
+        }
+
         if (!$this->produk_pengganti) {
             $this->addError('search_produk_pengganti', 'Pilih barang pengganti terlebih dahulu!');
             return;

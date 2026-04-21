@@ -10,7 +10,6 @@
     {{-- ============================== --}}
     <section class="w-full md:w-[70%] h-full flex flex-col p-4 md:p-6 overflow-y-auto">
 
-        {{-- Header --}}
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3">
             <div>
                 <h2 class="font-headline text-2xl font-bold {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }}">Point of Sale</h2>
@@ -30,7 +29,6 @@
             </div>
         </div>
 
-        {{-- Search Bar --}}
         <div class="relative mb-5">
             <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">search</span>
             <input type="text" wire:model.live.debounce.300ms="keyword"
@@ -40,7 +38,6 @@
                           focus:ring-2 focus:outline-none transition-all shadow-sm">
         </div>
 
-        {{-- Product Grid --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-max pb-4">
             @foreach($daftarProduk as $produk)
                 <div wire:click="tambahKeKeranjang({{ $produk->id_produk }})"
@@ -60,7 +57,7 @@
                                 $pillColors = ['bg-teal-50 text-teal-700', 'bg-amber-50 text-amber-700', 'bg-violet-50 text-violet-700', 'bg-rose-50 text-rose-700', 'bg-sky-50 text-sky-700', 'bg-emerald-50 text-emerald-700'];
                             @endphp
                             @foreach($produk->metadata as $key => $val)
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide {{ $pillColors[$loop->index % count($pillColors)] }}">{{ $val }}</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide {{ $pillColors[$loop->index % count($pillColors)] }}">{{ is_array($val) ? implode(', ', $val) : $val }}</span>
                             @endforeach
                         </div>
                     @endif
@@ -100,12 +97,13 @@
             @error('checkout') <div class="bg-red-50 text-red-600 p-2.5 rounded-lg mb-3 text-xs font-semibold border border-red-100">{{ $message }}</div> @enderror
             @error('pelanggan_wajib') <div class="bg-red-50 text-red-600 p-2.5 rounded-lg mb-3 text-xs font-semibold border border-red-100">{{ $message }}</div> @enderror
             @error('marketing_wajib') <div class="bg-red-50 text-red-600 p-2.5 rounded-lg mb-3 text-xs font-semibold border border-red-100">{{ $message }}</div> @enderror
+            @if(session()->has('error')) <div class="bg-red-50 text-red-600 p-2.5 rounded-lg mb-3 text-xs font-semibold border border-red-100">{{ session('error') }}</div> @endif
             @if(session()->has('sukses')) <div class="bg-emerald-50 text-emerald-600 p-2.5 rounded-lg mb-3 text-xs font-semibold border border-emerald-100">{{ session('sukses') }}</div> @endif
 
             {{-- SEARCHABLE UI: PELANGGAN & MARKETING --}}
             <div class="space-y-3 mb-5">
                 
-                {{-- PELANGGAN (Bisa Tambah Baru + Field Optional) --}}
+                {{-- PELANGGAN (Bisa Tambah Baru) --}}
                 <div x-data="{ open: false }" class="relative">
                     @if($id_pelanggan || $is_pelanggan_baru)
                         <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm transition-all">
@@ -119,7 +117,6 @@
                                 </button>
                             </div>
                             
-                            {{-- Field Tambahan Jika Ini Pelanggan Baru --}}
                             @if($is_pelanggan_baru)
                                 <div class="mt-3 space-y-2 border-t border-slate-100 pt-3">
                                     <p class="text-[10px] text-sky-600 font-bold uppercase">Lengkapi Data (Opsional)</p>
@@ -131,7 +128,8 @@
                     @else
                         <div class="relative">
                             <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">person_add</span>
-                            <input type="text" wire:model.live.debounce.300ms="searchPelanggan" @focus="open = true" @click.away="open = false" placeholder="Cari / Tambah Pelanggan Baru * ..."
+                            <!-- FIX: Hapus debounce.300ms agar instan, ubah menjadi wire:model.live murni -->
+                            <input type="text" wire:model.live="searchPelanggan" @focus="open = true" @click.away="open = false" placeholder="Cari / Tambah Pelanggan Baru * ..."
                                    class="w-full pl-10 pr-3 py-2.5 rounded-xl border-0 font-body text-sm bg-white focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/30' : 'focus:ring-sage/30' }} shadow-sm">
                         </div>
                         
@@ -151,7 +149,7 @@
                     @endif
                 </div>
 
-                {{-- MARKETING (Hanya Boleh Cari Data Yang Sudah Ada) --}}
+                {{-- MARKETING --}}
                 <div x-data="{ openMkt: false }" class="relative">
                     @if($id_marketing)
                         <div class="flex justify-between items-center bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
@@ -166,7 +164,8 @@
                     @else
                         <div class="relative">
                             <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">badge</span>
-                            <input type="text" wire:model.live.debounce.300ms="searchMarketing" @focus="openMkt = true" @click.away="openMkt = false" placeholder="Cari Sales (Wajib) * ..."
+                            <!-- FIX: Hapus debounce.300ms agar instan, ubah menjadi wire:model.live murni -->
+                            <input type="text" wire:model.live="searchMarketing" @focus="openMkt = true" @click.away="openMkt = false" placeholder="Cari Sales (Wajib) * ..."
                                    class="w-full pl-10 pr-3 py-2.5 rounded-xl border-0 font-body text-sm bg-white focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/30' : 'focus:ring-sage/30' }} shadow-sm">
                         </div>
                         
@@ -194,7 +193,12 @@
                 {{-- Cart Items --}}
                 <div class="flex-1 overflow-y-auto space-y-2 pr-1">
                     @foreach($keranjang as $index => $item)
-                        <div class="flex gap-3 p-3 bg-white rounded-lg group">
+                        @php
+                            // FIX: Mengunci panah atas/bawah HTML berdasarkan satuan
+                            $isPcs = in_array($item['satuan'], ['pcs', 'biji', 'unit', 'buah']);
+                            $stepValue = $isPcs ? "1" : "0.01";
+                        @endphp
+                        <div class="flex gap-3 p-3 bg-white rounded-lg group border border-transparent hover:border-slate-200 transition-all">
                             <div class="flex-1 min-w-0">
                                 <h4 class="font-semibold text-sm text-slate-800 truncate">{{ $item['nama_produk'] }}</h4>
                                 <p class="text-xs {{ $isOwnerRole ? 'text-blue-pro' : 'text-sage' }} font-bold mt-0.5">Rp {{ number_format($item['harga_satuan'], 0, ',', '.') }}</p>
@@ -202,8 +206,14 @@
                             <div class="flex flex-col items-end justify-between shrink-0">
                                 <button wire:click="hapusItem({{ $index }})" class="text-red-400 hover:text-red-600 transition-colors"><span class="material-symbols-outlined text-[16px]">close</span></button>
                                 <div class="flex items-center gap-1.5 mt-1">
-                                    <input type="number" step="0.01" wire:model.live.debounce.500ms="keranjang.{{ $index }}.jumlah" wire:change="hitungTotal" class="w-14 text-center border-0 rounded-lg text-xs p-1.5 font-bold bg-slate-50 focus:ring-1 {{ $isOwnerRole ? 'focus:ring-blue-pro/30' : 'focus:ring-sage/30' }}">
-                                    <span class="text-[10px] text-slate-400 font-bold uppercase">{{ $item['satuan'] }}</span>
+                                    <!-- FIX: Menghapus debounce.500ms agar hook updatedKeranjang langsung jalan secara real-time, 
+                                         dan menambahkan dynamic step berdasarkan satuan -->
+                                    <input type="number" 
+                                           step="{{ $stepValue }}" 
+                                           min="{{ $stepValue }}"
+                                           wire:model.live="keranjang.{{ $index }}.jumlah" 
+                                           class="w-16 text-center border border-slate-200 rounded-lg text-xs p-1.5 font-bold bg-white focus:ring-1 {{ $isOwnerRole ? 'focus:ring-blue-pro/50 focus:border-blue-pro' : 'focus:ring-sage/50 focus:border-sage' }}">
+                                    <span class="text-[10px] text-slate-400 font-bold uppercase w-8">{{ $item['satuan'] }}</span>
                                 </div>
                             </div>
                         </div>
@@ -218,7 +228,6 @@
                     <span class="font-headline text-2xl font-bold {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }}">Rp {{ number_format($total_belanja, 0, ',', '.') }}</span>
                 </div>
                 
-                {{-- TOMBOL REVIEW NOTA SEBELUM CETAK --}}
                 <button wire:click="konfirmasiPembayaran"
                         {{ empty($keranjang) ? 'disabled' : '' }}
                         class="w-full py-3.5 rounded-xl font-label uppercase tracking-wider text-sm font-bold text-white shadow-md hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed {{ $isOwnerRole ? 'bg-gradient-to-r from-blue-pro to-blue-600' : 'bg-gradient-to-r from-sage-dark to-sage' }}">
@@ -280,7 +289,6 @@
                     <div class="flex gap-3 w-full sm:w-auto">
                         <button wire:click="$set('showConfirmModal', false)" class="flex-1 sm:flex-none px-6 py-3 bg-white border-2 border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-colors">Perbaiki</button>
                         
-                        {{-- TOMBOL FINAL SUBMIT: DILENGKAPI FITUR ANTI-SPAM (LOADING STATE) --}}
                         <button wire:click="prosesPembayaranFinal" 
                                 wire:loading.attr="disabled"
                                 wire:target="prosesPembayaranFinal"
