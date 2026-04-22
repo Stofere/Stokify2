@@ -46,12 +46,20 @@ class ProdukIndex extends Component
     public $riwayat_tgl_akhir;
 
     // --- STATE UNTUK FORM ADJUST STOK & MODAL RECHECK ---
-    public $tipe_penyesuaian = 'KOREKSI_MINUS';
+    public $tipe_penyesuaian = 'KOREKSI_PLUS';
     public $jumlah_adjust = 0;
     public $keterangan_adjust = '';
     
     public $showConfirmModal = false; // State Modal Recheck
     public $password_admin = '';      // Password dipindah ke Modal Recheck
+
+    // --- STATE UNTUK FORM ADJUST ROL & MODAL RECHECK ---
+    public $tipe_penyesuaian_rol = 'ROL_MASUK';
+    public $jumlah_adjust_rol = 0;
+    public $keterangan_adjust_rol = '';
+    
+    public $showConfirmModalRol = false;
+    public $password_admin_rol = '';
 
     // --- STATE UNTUK MODAL DETAIL NOTA (KLIK DARI RIWAYAT) ---
     public $modal_detail_nota_open = false;
@@ -240,6 +248,12 @@ class ProdukIndex extends Component
         $this->tipe_penyesuaian = 'KOREKSI_MINUS';
     }
 
+    private function resetFormAdjustRol()
+    {
+        $this->reset(['tipe_penyesuaian_rol', 'jumlah_adjust_rol', 'keterangan_adjust_rol', 'password_admin_rol', 'showConfirmModalRol']);
+        $this->tipe_penyesuaian_rol = 'ROL_MASUK';
+    }
+
     // TAHAP 1: VALIDASI DATA DAN MUNCULKAN MODAL RECHECK
     public function reviewMutasiStok()
     {
@@ -295,6 +309,63 @@ class ProdukIndex extends Component
         } catch (Exception $e) {
             $this->showConfirmModal = false;
             $this->addError('sistem_stok', $e->getMessage());
+        }
+    }
+
+    // =========================================================================
+    // FITUR BUKU STOK ROL (Kabel / Lacak Rol)
+    // =========================================================================
+
+    public function reviewMutasiRol()
+    {
+        $this->validate([
+            'tipe_penyesuaian_rol' => 'required|in:ROL_MASUK,ROL_KELUAR',
+            'jumlah_adjust_rol' => 'required|numeric|min:1',
+            'keterangan_adjust_rol' => 'required|string|min:5',
+        ]);
+
+        if (fmod($this->jumlah_adjust_rol, 1) !== 0.0) {
+            $this->addError('jumlah_adjust_rol', "Rol harus berupa angka bulat (tidak boleh desimal).");
+            return;
+        }
+
+        if ($this->tipe_penyesuaian_rol === 'ROL_KELUAR' && $this->jumlah_adjust_rol > $this->produk_stok_aktif->stok_rol) {
+            $this->addError('jumlah_adjust_rol', "Jumlah keluar melebihi batas rol! Maksimal: " . $this->produk_stok_aktif->stok_rol);
+            return;
+        }
+
+        $this->showConfirmModalRol = true;
+    }
+
+    public function prosesAdjustRol(StockService $stockService)
+    {
+        $this->validate([
+            'password_admin_rol' => 'required',
+        ]);
+
+        if (!Hash::check($this->password_admin_rol, Auth::user()->password)) {
+            $this->addError('password_admin_rol', 'Password otorisasi salah!');
+            return;
+        }
+
+        try {
+            $stockService->adjustRolManual(
+                $this->produk_stok_aktif->id_produk,
+                Auth::id(),
+                $this->tipe_penyesuaian_rol,
+                (int) $this->jumlah_adjust_rol,
+                $this->keterangan_adjust_rol
+            );
+
+            session()->flash('sukses_rol', "Stok rol fisik barang berhasil diperbarui.");
+            
+            $this->produk_stok_aktif->refresh();
+            $this->resetFormAdjustRol();
+            $this->resetPage('riwayatPage'); 
+
+        } catch (Exception $e) {
+            $this->showConfirmModalRol = false;
+            $this->addError('sistem_rol', $e->getMessage());
         }
     }
 

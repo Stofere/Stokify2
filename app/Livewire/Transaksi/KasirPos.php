@@ -171,7 +171,12 @@ class KasirPos extends Component
         if (count($parts) == 2) {
             $index = $parts[0];
             $field = $parts[1];
-            $val = (float) $value;
+            
+            // Sanitize input dari type="text": ganti koma dengan titik, hapus karakter non-numerik
+            $sanitized = str_replace(',', '.', (string) $value);
+            $sanitized = preg_replace('/[^0-9.]/', '', $sanitized);
+            $val = (float) $sanitized;
+
             $satuanUtama = $this->keranjang[$index]['satuan_utama'];
             $tipeJual = $this->keranjang[$index]['tipe_jual'];
 
@@ -179,6 +184,9 @@ class KasirPos extends Component
             if (in_array($satuanUtama, ['pcs', 'biji', 'unit', 'buah'])) {
                 $val = floor($val);
             }
+
+            // Pastikan nilai minimal 0
+            $val = max(0, $val);
             
             $this->keranjang[$index][$field] = $val;
 
@@ -194,11 +202,25 @@ class KasirPos extends Component
     private function kalkulasiBaris($index)
     {
         $item = $this->keranjang[$index];
+        $isDualUnit = $item['has_eceran'] ?? false;
 
-        // Validasi Maksimal Stok (Berdasarkan jumlah pemotong gudang fisik)
+        // Validasi Maksimal Stok: Berdasarkan jumlah fisik yang dipotong dari gudang
         if ($item['lacak_stok'] && $item['jumlah_potong_gudang'] > $item['max_stok']) {
             $this->keranjang[$index]['jumlah_potong_gudang'] = $item['max_stok'];
-            session()->flash('error', "Stok gudang tidak mencukupi! Maksimal: " . $item['max_stok'] . " " . $item['satuan_utama']);
+            
+            // Untuk non-dual-unit, potong gudang == jumlah jual, jadi clamp keduanya
+            if (!$isDualUnit) {
+                $this->keranjang[$index]['jumlah_jual'] = $item['max_stok'];
+            }
+            
+            session()->flash('error', "Stok gudang tidak mencukupi! Maksimal: " . $item['max_stok'] . " " . strtoupper($item['satuan_utama']));
+        }
+
+        // Validasi tambahan: untuk barang NON-dual-unit, jumlah_jual juga harus dicek terhadap stok
+        if (!$isDualUnit && $item['lacak_stok'] && $item['jumlah_jual'] > $item['max_stok']) {
+            $this->keranjang[$index]['jumlah_jual'] = $item['max_stok'];
+            $this->keranjang[$index]['jumlah_potong_gudang'] = $item['max_stok'];
+            session()->flash('error', "Stok gudang tidak mencukupi! Maksimal: " . $item['max_stok'] . " " . strtoupper($item['satuan_utama']));
         }
 
         // Subtotal selalu dihitung dari jumlah jual (Meter / KG) dikali harga terpakai

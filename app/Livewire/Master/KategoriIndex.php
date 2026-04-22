@@ -9,6 +9,7 @@ use App\Models\Atribut;
 class KategoriIndex extends Component
 {
     public $nama_kategori = '';
+    public $lacak_rol = false;
     public $selectedAtribut = []; // Menyimpan ID atribut yang dicentang
     
     public $edit_id = null;
@@ -22,14 +23,20 @@ class KategoriIndex extends Component
 
         if ($this->edit_id) {
             $kat = Kategori::find($this->edit_id);
-            $kat->update(['nama_kategori' => $this->nama_kategori]);
+            $kat->update([
+                'nama_kategori' => $this->nama_kategori,
+                'lacak_rol' => $this->lacak_rol
+            ]);
             
             // Sinkronisasi Pivot Table kategori_atribut
             $kat->atribut()->sync($this->selectedAtribut);
             
             session()->flash('sukses', 'Kategori berhasil diubah.');
         } else {
-            $kat = Kategori::create(['nama_kategori' => $this->nama_kategori]);
+            $kat = Kategori::create([
+                'nama_kategori' => $this->nama_kategori,
+                'lacak_rol' => $this->lacak_rol
+            ]);
             $kat->atribut()->sync($this->selectedAtribut);
             
             session()->flash('sukses', 'Kategori baru berhasil dibuat.');
@@ -43,6 +50,7 @@ class KategoriIndex extends Component
         $kat = Kategori::with('atribut')->find($id);
         $this->edit_id = $kat->id_kategori;
         $this->nama_kategori = $kat->nama_kategori;
+        $this->lacak_rol = (bool) $kat->lacak_rol;
         
         // Ambil ID atribut yang sudah berelasi ke dalam array untuk checkbox
         $this->selectedAtribut = $kat->atribut->pluck('id_atribut')->toArray();
@@ -51,7 +59,7 @@ class KategoriIndex extends Component
 
     public function resetForm()
     {
-        $this->reset(['nama_kategori', 'selectedAtribut', 'edit_id']);
+        $this->reset(['nama_kategori', 'lacak_rol', 'selectedAtribut', 'edit_id']);
         $this->form_open = false;
     }
 

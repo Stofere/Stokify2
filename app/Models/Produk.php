@@ -24,6 +24,7 @@ class Produk extends Model
         'index_pencarian',
         'lokasi',
         'status_aktif',
+        'stok_rol',
     ];
 
     protected $casts = [
@@ -32,6 +33,7 @@ class Produk extends Model
         'status_aktif' => 'boolean',
         'harga_jual_satuan' => 'decimal:2',
         'stok_saat_ini' => 'decimal:3',
+        'stok_rol' => 'integer',
     ];
 
     // Accessor: Membersihkan .00 jika satuan adalah pcs/unit

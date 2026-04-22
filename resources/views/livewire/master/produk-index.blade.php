@@ -235,6 +235,12 @@
                                     <span class="font-bold text-base">{{ $prod->stok_display }}</span>
                                     <span class="text-[10px] uppercase font-bold">{{ $prod->satuan }}</span>
                                 </div>
+                                @if($prod->kategori->lacak_rol ?? false)
+                                    <div class="inline-flex items-center gap-1 mt-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 w-max mx-auto border border-indigo-100">
+                                        <span class="text-[10px] uppercase font-bold">🔵</span>
+                                        <span class="font-bold text-sm">{{ $prod->stok_rol }} Rol</span>
+                                    </div>
+                                @endif
                             @else
                                 <span class="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded font-bold uppercase">Tanpa Stok</span>
                             @endif
@@ -332,6 +338,52 @@
                             Review Perubahan Stok
                         </button>
                     </form>
+
+                    {{-- Form Koreksi Rol (Hanya tampil jika kategori melacak rol) --}}
+                    @if($produk_stok_aktif->kategori->lacak_rol ?? false)
+                        <div class="mt-8 border-t border-dashed {{ $isOwnerRole ? 'border-slate-300' : 'border-sage/30' }} pt-6">
+                            <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl text-center mb-5 shadow-sm relative overflow-hidden">
+                                <div class="absolute -right-4 -top-4 opacity-10 text-[60px]">🔵</div>
+                                <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest relative z-10">Sisa Rol Fisik</p>
+                                <p class="text-4xl font-headline font-bold mt-1 text-indigo-700 relative z-10">{{ $produk_stok_aktif->stok_rol }} <span class="text-base text-indigo-400">Rol</span></p>
+                            </div>
+
+                            <h4 class="font-semibold text-sm {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }} mb-3 border-b pb-2 {{ $isOwnerRole ? 'border-slate-200' : 'border-sage/15' }}">Form Koreksi Rol</h4>
+
+                            @if(session()->has('sukses_rol'))
+                                <div class="bg-emerald-50 text-emerald-600 p-2.5 mb-3 rounded-lg text-xs font-semibold border border-emerald-100">{{ session('sukses_rol') }}</div>
+                            @endif
+                            @error('sistem_rol')
+                                <div class="bg-red-50 text-red-600 p-2.5 mb-3 rounded-lg text-xs font-semibold border border-red-100">{{ $message }}</div>
+                            @enderror
+
+                            <form wire:submit.prevent="reviewMutasiRol" class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Tipe Mutasi Rol</label>
+                                    <select wire:model="tipe_penyesuaian_rol" class="w-full border-0 rounded-lg p-2.5 text-sm bg-white shadow-sm">
+                                        <option value="ROL_KELUAR">Rol Dipotong/Keluar (-)</option>
+                                        <option value="ROL_MASUK">Rol Baru Masuk (+)</option>
+                                    </select>
+                                    @error('tipe_penyesuaian_rol') <span class="text-red-500 text-xs font-semibold">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="col-span-2">
+                                        <label class="block text-sm font-bold text-gray-700 mb-1">Jumlah Rol</label>
+                                        <input type="number" step="1" min="1" wire:model="jumlah_adjust_rol" class="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-indigo-500 text-lg font-bold text-center">
+                                        @error('jumlah_adjust_rol') <span class="text-red-500 text-xs font-bold">{{ $message }}</span> @enderror
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Keterangan Wajib</label>
+                                    <textarea wire:model="keterangan_adjust_rol" rows="2" class="w-full border-0 rounded-lg p-2.5 text-sm bg-white shadow-sm" placeholder="Alasan..."></textarea>
+                                    @error('keterangan_adjust_rol') <span class="text-red-500 text-xs font-semibold">{{ $message }}</span> @enderror
+                                </div>
+                                <button type="submit" class="w-full py-3 rounded-xl font-bold text-sm text-white shadow-md transition-all active:scale-[0.98] bg-indigo-600 hover:bg-indigo-700">
+                                    Review Perubahan Rol
+                                </button>
+                            </form>
+                        </div>
+                    @endif
                 </div>
 
                 {{-- Right: History Table --}}
@@ -357,6 +409,9 @@
                                     <th class="p-3">Tipe</th>
                                     <th class="p-3 text-right">Mutasi</th>
                                     <th class="p-3 text-center">Sisa</th>
+                                    @if($produk_stok_aktif->kategori->lacak_rol ?? false)
+                                        <th class="p-3 text-center">Rol</th>
+                                    @endif
                                     <th class="p-3">Keterangan</th>
                                 </tr>
                             </thead>
@@ -371,17 +426,45 @@
                                             <td class="p-3">
                                                 @php
                                                     $tw = 'bg-slate-50 text-slate-500';
-                                                    if(in_array($riwayat->tipe, ['MASUK', 'KOREKSI_PLUS'])) $tw = 'bg-emerald-50 text-emerald-600';
-                                                    if(in_array($riwayat->tipe, ['KELUAR', 'KOREKSI_MINUS'])) $tw = 'bg-red-50 text-red-500';
+                                                    if(in_array($riwayat->tipe, ['MASUK', 'KOREKSI_PLUS', 'ROL_MASUK'])) $tw = 'bg-emerald-50 text-emerald-600';
+                                                    if(in_array($riwayat->tipe, ['KELUAR', 'KOREKSI_MINUS', 'ROL_KELUAR'])) $tw = 'bg-red-50 text-red-500';
                                                 @endphp
                                                 <span class="{{ $tw }} px-2 py-0.5 rounded text-[10px] font-bold uppercase">{{ str_replace('_', ' ', $riwayat->tipe) }}</span>
                                             </td>
-                                            <td class="p-3 text-right font-bold {{ in_array($riwayat->tipe, ['MASUK', 'KOREKSI_PLUS', 'AWAL']) ? 'text-emerald-600' : 'text-red-500' }}">
-                                                {{ in_array($riwayat->tipe, ['MASUK', 'KOREKSI_PLUS', 'AWAL']) ? '+' : '-' }}{{ fmod($riwayat->jumlah, 1) == 0 ? (int)$riwayat->jumlah : $riwayat->jumlah }}
+                                            <td class="p-3 text-right font-bold {{ in_array($riwayat->tipe, ['MASUK', 'KOREKSI_PLUS', 'AWAL', 'ROL_MASUK']) ? 'text-emerald-600' : 'text-red-500' }}">
+                                                @if(in_array($riwayat->tipe, ['ROL_MASUK', 'ROL_KELUAR']))
+                                                    <span class="text-slate-400 font-normal">-</span>
+                                                @else
+                                                    {{ in_array($riwayat->tipe, ['MASUK', 'KOREKSI_PLUS', 'AWAL']) ? '+' : '-' }}{{ fmod($riwayat->jumlah, 1) == 0 ? (int)$riwayat->jumlah : $riwayat->jumlah }}
+                                                    @if(strpos($riwayat->keterangan, '(Terjual') !== false)
+                                                        @php
+                                                            preg_match('/\(Terjual\s+(.*?)\)/', $riwayat->keterangan, $matches);
+                                                            $meterInfo = $matches[1] ?? '';
+                                                        @endphp
+                                                        @if($meterInfo)
+                                                            <div class="mt-1">
+                                                                <span class="text-[9px] text-amber-600 font-bold bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">{{ $meterInfo }}</span>
+                                                            </div>
+                                                        @endif
+                                                    @endif
+                                                @endif
                                             </td>
                                             <td class="p-3 text-center font-bold text-slate-700 bg-slate-50/50">
                                                 {{ fmod($riwayat->stok_sesudah, 1) == 0 ? (int)$riwayat->stok_sesudah : $riwayat->stok_sesudah }}
                                             </td>
+                                            @if($produk_stok_aktif->kategori->lacak_rol ?? false)
+                                                <td class="p-3 text-center">
+                                                    @if($riwayat->rol_mutasi !== null)
+                                                        @php $isPlus = in_array($riwayat->tipe, ['ROL_MASUK', 'AWAL', 'MASUK']); @endphp
+                                                        <div class="text-[10px] font-bold {{ $isPlus ? 'text-indigo-600' : 'text-rose-500' }}">
+                                                            {{ $isPlus ? '+' : '-' }}{{ $riwayat->rol_mutasi }} 🔵
+                                                        </div>
+                                                        <div class="text-[11px] font-bold text-slate-700">{{ $riwayat->rol_sesudah }}</div>
+                                                    @else
+                                                        <span class="text-slate-300">-</span>
+                                                    @endif
+                                                </td>
+                                            @endif
                                             <td class="p-3 text-xs">
                                                 @if($riwayat->id_transaksi_penjualan)
                                                     <button wire:click="lihatDetailNota({{ $riwayat->id_transaksi_penjualan }}, 'POS')" class="w-full text-left p-2 rounded-lg transition-colors {{ $isOwnerRole ? 'bg-blue-50 hover:bg-blue-100 border border-blue-100' : 'bg-sage-light/50 hover:bg-sage-light border border-sage/10' }}">
@@ -480,6 +563,74 @@
                                 wire:loading.attr="disabled"
                                 class="w-full sm:w-auto px-8 py-2.5 text-white rounded-xl font-bold shadow-md transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 {{ $isOwnerRole ? 'bg-blue-pro hover:bg-blue-800' : 'bg-sage-dark hover:bg-sage' }}">
                             <span wire:loading.remove>Eksekusi Stok</span>
+                            <span wire:loading>Memproses...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        {{-- ==================================================================== --}}
+        {{-- MODAL RECHECK KONFIRMASI MUTASI ROL FINAL                            --}}
+        {{-- ==================================================================== --}}
+        @if($showConfirmModalRol)
+            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 fade-in">
+                <div class="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col border-t-4 {{ $tipe_penyesuaian_rol === 'ROL_MASUK' ? 'border-indigo-500' : 'border-rose-500' }}">
+                    
+                    <div class="px-6 py-4 flex justify-between items-center shrink-0 border-b border-slate-100">
+                        <h3 class="text-lg font-headline font-bold flex items-center gap-2 text-indigo-900">⚠️ Konfirmasi Final Mutasi Rol</h3>
+                        <button wire:click="$set('showConfirmModalRol', false)" class="text-slate-400 hover:text-red-500 transition-colors">
+                            <span class="material-symbols-outlined text-[20px]">close</span>
+                        </button>
+                    </div>
+
+                    <div class="p-6 bg-slate-50 flex-1">
+                        <p class="text-center text-slate-600 mb-6 text-sm">Anda akan mengubah fisik stok ROL gudang. Pastikan data sudah sesuai fisik.</p>
+
+                        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                            <div class="flex justify-between border-b border-slate-100 pb-3">
+                                <span class="text-slate-500 font-bold text-sm">Barang Kabel:</span>
+                                <span class="font-bold text-slate-800 text-right">{{ $produk_stok_aktif->nama_produk }}</span>
+                            </div>
+                            
+                            <div class="flex justify-between border-b border-slate-100 pb-3">
+                                <span class="text-slate-500 font-bold text-sm">Perubahan Rol:</span>
+                                @if($tipe_penyesuaian_rol === 'ROL_MASUK')
+                                    <span class="font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded text-lg">+ {{ $jumlah_adjust_rol }} Rol (MASUK)</span>
+                                @else
+                                    <span class="font-bold text-rose-600 bg-rose-50 px-3 py-1 rounded text-lg">- {{ $jumlah_adjust_rol }} Rol (KELUAR)</span>
+                                @endif
+                            </div>
+
+                            <div class="flex justify-between border-b border-slate-100 pb-3">
+                                <span class="text-slate-500 font-bold text-sm">Sisa Rol Nanti:</span>
+                                <span class="font-bold text-indigo-700 text-xl">
+                                    {{ $tipe_penyesuaian_rol === 'ROL_MASUK' ? ($produk_stok_aktif->stok_rol + $jumlah_adjust_rol) : ($produk_stok_aktif->stok_rol - $jumlah_adjust_rol) }} 
+                                    <span class="text-sm font-semibold uppercase tracking-wider">Rol 🔵</span>
+                                </span>
+                            </div>
+
+                            <div>
+                                <span class="text-slate-500 font-bold text-sm block mb-1">Alasan Penyesuaian:</span>
+                                <p class="text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100 italic text-sm">"{{ $keterangan_adjust_rol }}"</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 bg-red-50 border border-red-200 rounded-xl p-5 shadow-sm">
+                            <label class="block text-[10px] font-bold text-red-700 mb-1.5 uppercase tracking-widest">Otorisasi Keamanan (Wajib)</label>
+                            <p class="text-xs text-red-600 mb-3 font-medium">Tindakan ini akan tercatat permanen. Masukkan password admin.</p>
+                            <input type="password" wire:model="password_admin_rol" placeholder="Masukkan Password Akun Anda..." class="w-full border border-red-200 rounded-lg p-3 focus:ring-2 focus:ring-red-200 text-sm font-semibold bg-white shadow-inner">
+                            @error('password_admin_rol') <span class="text-red-500 text-xs font-semibold mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+
+                    <div class="bg-white px-6 py-4 border-t border-slate-200 flex flex-col-reverse sm:flex-row gap-3 justify-end items-center">
+                        <button wire:click="$set('showConfirmModalRol', false)" class="w-full sm:w-auto px-6 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl font-semibold hover:bg-slate-50 transition-colors">Batal</button>
+                        
+                        <button wire:click="prosesAdjustRol" 
+                                wire:loading.attr="disabled"
+                                class="w-full sm:w-auto px-8 py-2.5 text-white rounded-xl font-bold shadow-md transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700">
+                            <span wire:loading.remove>Eksekusi Rol</span>
                             <span wire:loading>Memproses...</span>
                         </button>
                     </div>

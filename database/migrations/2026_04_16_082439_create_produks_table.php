@@ -21,6 +21,7 @@ return new class extends Migration
             $table->text('index_pencarian');
             $table->string('lokasi', 255)->nullable();
             $table->boolean('status_aktif')->default(true);
+            $table->integer('stok_rol')->default(0); // Penanda manual: sisa berapa Rol fisik (khusus kategori Kabel)
             $table->timestamps();
 
             // Sesuai aturan arsitektur: RESTRICT, produk tidak boleh dihapus jika sudah berelasi

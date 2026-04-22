@@ -14,11 +14,14 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id'); // Pelaku perubah stok
             $table->unsignedBigInteger('id_transaksi_penjualan')->nullable();
             $table->unsignedBigInteger('id_retur')->nullable();
-            $table->enum('tipe', ['AWAL', 'MASUK', 'KELUAR', 'KOREKSI_PLUS', 'KOREKSI_MINUS', 'BATAL_JUAL']);
+            $table->enum('tipe', ['AWAL', 'MASUK', 'KELUAR', 'KOREKSI_PLUS', 'KOREKSI_MINUS', 'BATAL_JUAL', 'ROL_MASUK', 'ROL_KELUAR']);
             $table->decimal('jumlah', 15, 3);
             $table->decimal('stok_sebelum', 15, 3);
             $table->decimal('stok_sesudah', 15, 3);
             $table->string('keterangan', 255);
+            $table->integer('rol_mutasi')->nullable();   // Jumlah Rol yang berubah (hanya terisi saat mutasi Rol)
+            $table->integer('rol_sebelum')->nullable();  // Sisa Rol sebelum mutasi
+            $table->integer('rol_sesudah')->nullable();  // Sisa Rol sesudah mutasi
             $table->timestamps();
 
             $table->foreign('id_produk')->references('id_produk')->on('produk')->onDelete('cascade');

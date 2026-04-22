@@ -13,6 +13,11 @@ class Kategori extends Model
 
     protected $fillable = [
         'nama_kategori',
+        'lacak_rol',
+    ];
+
+    protected $casts = [
+        'lacak_rol' => 'boolean',
     ];
 
     public function atribut(): BelongsToMany

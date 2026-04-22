@@ -106,11 +106,17 @@
                     <div class="space-y-3">
                         @foreach($aktivitasHariIni as $log)
                             <div class="flex gap-3 text-sm items-start">
-                                <div class="w-2 h-2 mt-1.5 rounded-full shrink-0 {{ in_array($log->tipe, ['MASUK', 'KOREKSI_PLUS']) ? 'bg-emerald-400' : (in_array($log->tipe, ['KELUAR', 'KOREKSI_MINUS']) ? 'bg-red-400' : 'bg-sage') }}"></div>
+                                <div class="w-2 h-2 mt-1.5 rounded-full shrink-0 {{ in_array($log->tipe, ['MASUK', 'KOREKSI_PLUS', 'ROL_MASUK']) ? 'bg-emerald-400' : (in_array($log->tipe, ['KELUAR', 'KOREKSI_MINUS', 'ROL_KELUAR']) ? 'bg-red-400' : 'bg-sage') }}"></div>
                                 <div>
-                                    <p class="font-semibold text-sage-dark">{{ $log->user->name }}</p>
-                                    <p class="text-slate-500 text-xs">
-                                        {{ str_replace('_', ' ', $log->tipe) }} <span class="font-bold text-sage-dark">{{ abs($log->jumlah) }}</span> qty pada <span class="text-sage font-semibold">{{ $log->produk->nama_produk }}</span>.
+                                    <p class="font-semibold text-charcoal">{{ $log->user->name }}</p>
+                                    <p class="text-slate-500 text-xs mt-0.5">
+                                        {{ str_replace('_', ' ', $log->tipe) }} 
+                                        @if(in_array($log->tipe, ['ROL_MASUK', 'ROL_KELUAR']))
+                                            <span class="font-bold text-indigo-600">{{ abs($log->rol_mutasi) }}</span> Rol 
+                                        @else
+                                            <span class="font-bold text-slate-700">{{ abs($log->jumlah) }}</span> qty 
+                                        @endif
+                                        pada <span class="font-semibold">{{ $log->produk->nama_produk }}</span>.
                                     </p>
                                     <p class="text-[10px] text-slate-400 mt-0.5">{{ $log->created_at->diffForHumans() }} | {{ $log->keterangan }}</p>
                                 </div>
@@ -254,11 +260,17 @@
                     <div class="space-y-3">
                         @foreach($aktivitasHariIni as $log)
                             <div class="flex gap-3 text-sm items-start">
-                                <div class="w-2 h-2 mt-1.5 rounded-full shrink-0 {{ in_array($log->tipe, ['MASUK', 'KOREKSI_PLUS']) ? 'bg-emerald-400' : (in_array($log->tipe, ['KELUAR', 'KOREKSI_MINUS']) ? 'bg-red-400' : 'bg-sage') }}"></div>
+                                <div class="w-2 h-2 mt-1.5 rounded-full shrink-0 {{ in_array($log->tipe, ['MASUK', 'KOREKSI_PLUS', 'ROL_MASUK']) ? 'bg-emerald-400' : (in_array($log->tipe, ['KELUAR', 'KOREKSI_MINUS', 'ROL_KELUAR']) ? 'bg-red-400' : 'bg-blue-400') }}"></div>
                                 <div>
-                                    <p class="font-semibold text-sage-dark">{{ $log->user->name }}</p>
-                                    <p class="text-slate-500 text-xs">
-                                        {{ str_replace('_', ' ', $log->tipe) }} <span class="font-bold text-sage-dark">{{ abs($log->jumlah) }}</span> qty pada <span class="text-sage font-semibold">{{ $log->produk->nama_produk }}</span>.
+                                    <p class="font-semibold text-charcoal">{{ $log->user->name }}</p>
+                                    <p class="text-slate-500 text-xs mt-0.5">
+                                        {{ str_replace('_', ' ', $log->tipe) }} 
+                                        @if(in_array($log->tipe, ['ROL_MASUK', 'ROL_KELUAR']))
+                                            <span class="font-bold text-indigo-600">{{ abs($log->rol_mutasi) }}</span> Rol 
+                                        @else
+                                            <span class="font-bold text-slate-700">{{ abs($log->jumlah) }}</span> qty 
+                                        @endif
+                                        pada <span class="font-semibold">{{ $log->produk->nama_produk }}</span>.
                                     </p>
                                     <p class="text-[10px] text-slate-400 mt-0.5">{{ $log->created_at->diffForHumans() }} | {{ $log->keterangan }}</p>
                                 </div>

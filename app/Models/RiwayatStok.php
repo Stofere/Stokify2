@@ -20,12 +20,18 @@ class RiwayatStok extends Model
         'stok_sebelum',
         'stok_sesudah',
         'keterangan',
+        'rol_mutasi',
+        'rol_sebelum',
+        'rol_sesudah',
     ];
 
     protected $casts = [
         'jumlah' => 'decimal:3',
         'stok_sebelum' => 'decimal:3',
         'stok_sesudah' => 'decimal:3',
+        'rol_mutasi' => 'integer',
+        'rol_sebelum' => 'integer',
+        'rol_sesudah' => 'integer',
     ];
 
     public function produk(): BelongsTo

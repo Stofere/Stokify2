@@ -26,10 +26,22 @@
                 <button wire:click="resetForm" class="text-slate-400 hover:text-red-500 transition-colors"><span class="material-symbols-outlined">close</span></button>
             </div>
             <div class="p-6">
-                <div class="mb-5">
-                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Nama Kategori</label>
-                    <input type="text" wire:model="nama_kategori" placeholder="Contoh: Woofer, Fullring, Kabel..." class="w-full md:w-1/2 border-0 rounded-lg p-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }}">
-                    @error('nama_kategori') <span class="text-red-500 text-xs font-semibold">{{ $message }}</span> @enderror
+                <div class="mb-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Nama Kategori</label>
+                        <input type="text" wire:model="nama_kategori" placeholder="Contoh: Woofer, Fullring, Kabel..." class="w-full border-0 rounded-lg p-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }}">
+                        @error('nama_kategori') <span class="text-red-500 text-xs font-semibold">{{ $message }}</span> @enderror
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Fitur Lacak Rol (Khusus Kabel)</label>
+                        <label class="flex items-center gap-2 cursor-pointer mt-3">
+                            <div class="relative">
+                                <input type="checkbox" wire:model="lacak_rol" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all {{ $isOwnerRole ? 'peer-checked:bg-blue-pro' : 'peer-checked:bg-sage' }}"></div>
+                            </div>
+                            <span class="text-sm font-semibold text-slate-700">Aktifkan Tracking Rol Manual</span>
+                        </label>
+                    </div>
                 </div>
                 <div class="mb-5 p-4 rounded-xl {{ $isOwnerRole ? 'bg-blue-50/50 border border-blue-100' : 'bg-sage-light/40 border border-sage/10' }}">
                     <label class="block text-xs font-bold mb-2 {{ $isOwnerRole ? 'text-blue-pro' : 'text-sage-dark' }}">Atribut yang aktif di kategori ini</label>
@@ -62,7 +74,12 @@
                 <tbody class="text-sm">
                     @foreach($daftarKategori as $kat)
                     <tr class="{{ $isOwnerRole ? 'hover:bg-slate-50 border-b border-slate-50' : 'hover:bg-sage-light/20 border-b border-sage/5' }} transition-colors">
-                        <td class="p-4 font-semibold {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }}">{{ $kat->nama_kategori }}</td>
+                        <td class="p-4 font-semibold {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }}">
+                            {{ $kat->nama_kategori }}
+                            @if($kat->lacak_rol)
+                                <span class="ml-2 bg-indigo-100 text-indigo-700 text-[9px] px-1.5 py-0.5 rounded font-black tracking-widest uppercase">Lacak Rol</span>
+                            @endif
+                        </td>
                         <td class="p-4">
                             <div class="flex flex-wrap gap-1.5">
                                 @forelse($kat->atribut as $a)

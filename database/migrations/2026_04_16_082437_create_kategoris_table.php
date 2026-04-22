@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('kategori', function (Blueprint $table) {
             $table->id('id_kategori');
             $table->string('nama_kategori', 255);
+            $table->boolean('lacak_rol')->default(false); // Flag untuk kategori Kabel: aktifkan pelacakan manual Rol
             $table->timestamps();
         });
     }

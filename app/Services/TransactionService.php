@@ -102,10 +102,18 @@ class TransactionService
     private function generateKodeNota(): string
     {
         $tanggal = now()->format('d-m-Y');
-        // Cari nota terakhir di hari yang sama untuk auto-increment harian
-        $lastNota = TransaksiPenjualan::whereDate('tanggal_transaksi', now()->toDateString())->count();
-        $urutan = str_pad($lastNota + 1, 3, '0', STR_PAD_LEFT);
-        
-        return "Nota_Jual_{$tanggal}-{$urutan}";
+        $prefix = "Nota_Jual_{$tanggal}-";
+
+        // Cari nomor urut TERTINGGI dari kode_nota yang memiliki prefix tanggal hari ini.
+        // Ini lebih akurat daripada count() karena:
+        // 1. Tidak terpengaruh oleh tanggal_transaksi (yang bisa di-backdate).
+        // 2. Tetap aman meskipun ada nota yang dihapus (tidak akan terjadi tabrakan).
+        $lastNota = TransaksiPenjualan::where('kode_nota', 'LIKE', $prefix . '%')
+            ->selectRaw("MAX(CAST(SUBSTRING(kode_nota, ?, 3) AS UNSIGNED)) as max_urut", [strlen($prefix) + 1])
+            ->value('max_urut');
+
+        $urutan = str_pad(($lastNota ?? 0) + 1, 3, '0', STR_PAD_LEFT);
+
+        return "{$prefix}{$urutan}";
     }
 }

@@ -246,29 +246,58 @@
                                     </div>
                                     
                                     <div class="flex items-center gap-2">
-                                        {{-- Input 1: Panjang Meter (Untuk Nota) --}}
+                                        {{-- Input 1: Panjang Meter / KG (Untuk Nota) --}}
                                         <div class="flex-1">
                                             <label class="block text-[9px] font-bold text-amber-700 uppercase">Jml Nota ({{ $item['tipe_jual'] == 'eceran' ? 'Meter' : strtoupper($item['satuan_utama']) }})</label>
-                                            <input type="number" step="0.001" min="0.001" wire:model.live="keranjang.{{ $index }}.jumlah_jual" class="w-full text-center border-0 rounded text-xs p-1.5 font-bold bg-white focus:ring-1 focus:ring-amber-500">
+                                            <input type="text" inputmode="decimal" 
+                                                   wire:model.live.debounce.500ms="keranjang.{{ $index }}.jumlah_jual" 
+                                                   placeholder="0"
+                                                   class="w-full text-center border-0 rounded text-sm p-2 font-bold bg-white focus:ring-1 focus:ring-amber-500">
                                         </div>
                                         <span class="text-amber-300 font-bold mt-4">&rarr;</span>
-                                        {{-- Input 2: Berat Timbangan (Hanya muncul dan bisa diubah jika mode Eceran/Meter) --}}
+                                        {{-- Input 2: Berat Timbangan (Hanya bisa diubah jika mode Eceran/Meter) --}}
                                         <div class="flex-1">
                                             <label class="block text-[9px] font-bold {{ $item['tipe_jual'] == 'eceran' ? 'text-red-600' : 'text-amber-700' }} uppercase">Potong Fisik ({{ strtoupper($item['satuan_utama']) }})</label>
-                                            <input type="number" step="0.001" min="0.001" wire:model.live="keranjang.{{ $index }}.jumlah_potong_gudang" {{ $item['tipe_jual'] == 'utama' ? 'readonly' : '' }} class="w-full text-center border-0 rounded text-xs p-1.5 font-bold {{ $item['tipe_jual'] == 'eceran' ? 'bg-red-50 text-red-700 ring-1 ring-red-300' : 'bg-amber-100 text-amber-700 opacity-70' }}">
+                                            <input type="text" inputmode="decimal" 
+                                                   wire:model.live.debounce.500ms="keranjang.{{ $index }}.jumlah_potong_gudang" 
+                                                   placeholder="Ketik berat"
+                                                   {{ $item['tipe_jual'] == 'utama' ? 'readonly' : '' }} 
+                                                   class="w-full text-center border-0 rounded text-sm p-2 font-bold {{ $item['tipe_jual'] == 'eceran' ? 'bg-red-50 text-red-700 ring-1 ring-red-300' : 'bg-amber-100 text-amber-700 opacity-70' }}">
                                         </div>
                                     </div>
+
+                                    {{-- Warning: Wajib Timbang --}}
                                     @if($item['tipe_jual'] == 'eceran' && $item['jumlah_potong_gudang'] <= 0)
-                                        <p class="text-[9px] text-red-500 font-bold mt-1 italic text-center">Wajib Timbang! Isi fisik yg terpotong.</p>
+                                        <p class="text-[9px] text-red-500 font-bold mt-1.5 italic text-center">⚖️ Wajib Timbang! Isi fisik yg terpotong dari gudang.</p>
+                                    @endif
+
+                                    {{-- Warning: Stok Limit --}}
+                                    @if($item['lacak_stok'] && $item['jumlah_potong_gudang'] > 0)
+                                        <div class="mt-1.5 flex items-center justify-between">
+                                            <span class="text-[9px] font-bold {{ $item['jumlah_potong_gudang'] > $item['max_stok'] ? 'text-red-600' : 'text-slate-400' }}">
+                                                Maks stok: {{ $item['max_stok'] }} {{ strtoupper($item['satuan_utama']) }}
+                                            </span>
+                                            @if($item['jumlah_potong_gudang'] > $item['max_stok'])
+                                                <span class="text-[9px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full animate-pulse">⚠️ MELEBIHI STOK!</span>
+                                            @endif
+                                        </div>
                                     @endif
                                 </div>
                             @else
                                 {{-- INPUT NORMAL UNTUK BARANG BIASA --}}
                                 <div class="flex justify-between items-end mt-2 pt-2 border-t border-slate-100">
                                     <div class="flex items-center gap-1.5">
-                                        <input type="number" step="{{ $stepValue }}" min="{{ $stepValue }}" wire:model.live="keranjang.{{ $index }}.jumlah_jual" class="w-16 text-center border border-slate-200 rounded-lg text-xs p-1.5 font-bold bg-white focus:ring-1 {{ $isOwnerRole ? 'focus:ring-blue-pro/50 focus:border-blue-pro' : 'focus:ring-sage/50 focus:border-sage' }}">
+                                        <input type="{{ $isPcs ? 'number' : 'text' }}" 
+                                               {{ $isPcs ? 'step=1 min=1' : 'inputmode=decimal' }}
+                                               wire:model.live.debounce.500ms="keranjang.{{ $index }}.jumlah_jual" 
+                                               placeholder="0"
+                                               class="w-20 text-center border border-slate-200 rounded-lg text-sm p-2 font-bold bg-white focus:ring-1 {{ $isOwnerRole ? 'focus:ring-blue-pro/50 focus:border-blue-pro' : 'focus:ring-sage/50 focus:border-sage' }}">
                                         <span class="text-[10px] text-slate-400 font-bold uppercase w-8">{{ $item['satuan_utama'] }}</span>
                                     </div>
+                                    {{-- Warning: Stok Limit untuk barang biasa --}}
+                                    @if($item['lacak_stok'] && $item['jumlah_jual'] > $item['max_stok'])
+                                        <span class="text-[9px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full animate-pulse">⚠️ Maks: {{ $item['max_stok'] }}</span>
+                                    @endif
                                 </div>
                             @endif
 
