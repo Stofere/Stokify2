@@ -127,6 +127,19 @@
             </div>
         </div>
 
+        {{-- Filter Global Waktu --}}
+        <div class="bg-white rounded-2xl border border-slate-100 p-5 mb-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+                <h3 class="font-headline font-bold text-charcoal">Filter Performa</h3>
+                <p class="text-xs text-slate-500">Rentang waktu: <span class="font-semibold text-slate-700">{{ $filterText }}</span></p>
+            </div>
+            <div class="flex items-center gap-3">
+                <input type="date" wire:model.live="startDate" class="text-sm border border-slate-200 rounded-lg px-3 py-2 outline-none text-slate-700 focus:ring-sage focus:border-sage">
+                <span class="text-slate-400 text-sm">s/d</span>
+                <input type="date" wire:model.live="endDate" class="text-sm border border-slate-200 rounded-lg px-3 py-2 outline-none text-slate-700 focus:ring-sage focus:border-sage">
+            </div>
+        </div>
+
         {{-- Top Performers Row --}}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
@@ -134,22 +147,22 @@
             <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                 <h4 class="font-label text-[11px] font-bold uppercase tracking-widest px-5 pt-5 pb-3 text-slate-400 flex items-center gap-2">
                     <span class="material-symbols-outlined text-[16px] text-amber-500">emoji_events</span>
-                    Performa Marketing (Bulan Ini)
+                    Performa Marketing ({{ $filterText }})
                 </h4>
                 <div class="divide-y divide-slate-50">
                     @forelse($topMarketing as $index => $mkt)
                         <div class="px-5 py-3 flex justify-between items-center hover:bg-slate-50/50 transition-colors">
                             <div class="flex items-center gap-3">
                                 <div class="w-7 h-7 rounded-full bg-blue-pro/10 text-blue-pro flex items-center justify-center text-xs font-bold">{{ $index + 1 }}</div>
-                                <p class="font-semibold text-charcoal text-sm">{{ $mkt->marketing->nama }}</p>
+                                <p class="font-semibold text-charcoal text-sm cursor-pointer hover:text-blue-600 hover:underline" wire:click="openMarketingModal('{{ $mkt->id_marketing }}', '{{ addslashes($mkt->marketing->nama) }}')">{{ $mkt->marketing->nama }}</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-lg font-headline font-bold text-blue-pro">{{ $mkt->total_transaksi }}</p>
-                                <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Kali Jualan</p>
+                                <p class="text-sm font-headline font-bold text-blue-pro">{{ $mkt->total_nota }} Nota</p>
+                                <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Total Transaksi</p>
                             </div>
                         </div>
                     @empty
-                        <div class="px-5 py-6 text-center text-slate-400 text-sm font-semibold">Belum ada data marketing bulan ini.</div>
+                        <div class="px-5 py-6 text-center text-slate-400 text-sm font-semibold">Belum ada data marketing.</div>
                     @endforelse
                 </div>
             </div>
@@ -158,22 +171,22 @@
             <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                 <h4 class="font-label text-[11px] font-bold uppercase tracking-widest px-5 pt-5 pb-3 text-slate-400 flex items-center gap-2">
                     <span class="material-symbols-outlined text-[16px] text-rose-400">favorite</span>
-                    Pelanggan Paling Aktif (Bulan Ini)
+                    Pelanggan Paling Aktif ({{ $filterText }})
                 </h4>
                 <div class="divide-y divide-slate-50">
                     @forelse($topPelanggan as $index => $plg)
                         <div class="px-5 py-3 flex justify-between items-center hover:bg-slate-50/50 transition-colors">
                             <div class="flex items-center gap-3">
                                 <div class="w-7 h-7 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center text-xs font-bold">{{ $index + 1 }}</div>
-                                <p class="font-semibold text-charcoal text-sm">{{ $plg->pelanggan->nama }}</p>
+                                <p class="font-semibold text-charcoal text-sm cursor-pointer hover:text-rose-500 hover:underline" wire:click="openCustomerModal('{{ $plg->id_pelanggan }}', '{{ addslashes($plg->pelanggan->nama) }}')">{{ $plg->pelanggan->nama }}</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-lg font-headline font-bold text-rose-500">{{ $plg->total_transaksi }}</p>
-                                <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Kali Beli</p>
+                                <p class="text-sm font-headline font-bold text-rose-500">{{ $plg->total_nota }} Nota</p>
+                                <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Total Transaksi</p>
                             </div>
                         </div>
                     @empty
-                        <div class="px-5 py-6 text-center text-slate-400 text-sm font-semibold">Belum ada data pelanggan tercatat.</div>
+                        <div class="px-5 py-6 text-center text-slate-400 text-sm font-semibold">Belum ada data pelanggan.</div>
                     @endforelse
                 </div>
             </div>
@@ -282,6 +295,19 @@
         </div>
         </div>
 
+        {{-- Filter Global Waktu --}}
+        <div class="bg-white rounded-2xl border border-slate-100 p-5 mb-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+                <h3 class="font-headline font-bold text-charcoal">Filter Performa</h3>
+                <p class="text-xs text-slate-500">Rentang waktu: <span class="font-semibold text-slate-700">{{ $filterText }}</span></p>
+            </div>
+            <div class="flex items-center gap-3">
+                <input type="date" wire:model.live="startDate" class="text-sm border border-slate-200 rounded-lg px-3 py-2 outline-none text-slate-700 focus:ring-blue-pro focus:border-blue-pro">
+                <span class="text-slate-400 text-sm">s/d</span>
+                <input type="date" wire:model.live="endDate" class="text-sm border border-slate-200 rounded-lg px-3 py-2 outline-none text-slate-700 focus:ring-blue-pro focus:border-blue-pro">
+            </div>
+        </div>
+
         {{-- Top Performers Row --}}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
@@ -289,22 +315,22 @@
             <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                 <h4 class="font-label text-[11px] font-bold uppercase tracking-widest px-5 pt-5 pb-3 text-slate-400 flex items-center gap-2">
                     <span class="material-symbols-outlined text-[16px] text-amber-500">emoji_events</span>
-                    Performa Marketing (Bulan Ini)
+                    Performa Marketing ({{ $filterText }})
                 </h4>
                 <div class="divide-y divide-slate-50">
                     @forelse($topMarketing as $index => $mkt)
                         <div class="px-5 py-3 flex justify-between items-center hover:bg-slate-50/50 transition-colors">
                             <div class="flex items-center gap-3">
                                 <div class="w-7 h-7 rounded-full bg-blue-pro/10 text-blue-pro flex items-center justify-center text-xs font-bold">{{ $index + 1 }}</div>
-                                <p class="font-semibold text-charcoal text-sm">{{ $mkt->marketing->nama }}</p>
+                                <p class="font-semibold text-charcoal text-sm cursor-pointer hover:text-blue-600 hover:underline" wire:click="openMarketingModal('{{ $mkt->id_marketing }}', '{{ addslashes($mkt->marketing->nama) }}')">{{ $mkt->marketing->nama }}</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-lg font-headline font-bold text-blue-pro">{{ $mkt->total_transaksi }}</p>
-                                <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Kali Jualan</p>
+                                <p class="text-sm font-headline font-bold text-blue-pro">Rp {{ number_format($mkt->total_revenue, 0, ',', '.') }}</p>
+                                <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{{ $mkt->total_nota }} Nota Transaksi</p>
                             </div>
                         </div>
                     @empty
-                        <div class="px-5 py-6 text-center text-slate-400 text-sm font-semibold">Belum ada data marketing bulan ini.</div>
+                        <div class="px-5 py-6 text-center text-slate-400 text-sm font-semibold">Belum ada data marketing.</div>
                     @endforelse
                 </div>
             </div>
@@ -313,22 +339,22 @@
             <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                 <h4 class="font-label text-[11px] font-bold uppercase tracking-widest px-5 pt-5 pb-3 text-slate-400 flex items-center gap-2">
                     <span class="material-symbols-outlined text-[16px] text-rose-400">favorite</span>
-                    Pelanggan Paling Aktif (Bulan Ini)
+                    Pelanggan Paling Aktif ({{ $filterText }})
                 </h4>
                 <div class="divide-y divide-slate-50">
                     @forelse($topPelanggan as $index => $plg)
                         <div class="px-5 py-3 flex justify-between items-center hover:bg-slate-50/50 transition-colors">
                             <div class="flex items-center gap-3">
                                 <div class="w-7 h-7 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center text-xs font-bold">{{ $index + 1 }}</div>
-                                <p class="font-semibold text-charcoal text-sm">{{ $plg->pelanggan->nama }}</p>
+                                <p class="font-semibold text-charcoal text-sm cursor-pointer hover:text-rose-500 hover:underline" wire:click="openCustomerModal('{{ $plg->id_pelanggan }}', '{{ addslashes($plg->pelanggan->nama) }}')">{{ $plg->pelanggan->nama }}</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-lg font-headline font-bold text-rose-500">{{ $plg->total_transaksi }}</p>
-                                <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Kali Beli</p>
+                                <p class="text-sm font-headline font-bold text-rose-500">Rp {{ number_format($plg->total_revenue, 0, ',', '.') }}</p>
+                                <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">{{ $plg->total_nota }} Nota Transaksi</p>
                             </div>
                         </div>
                     @empty
-                        <div class="px-5 py-6 text-center text-slate-400 text-sm font-semibold">Belum ada data pelanggan tercatat.</div>
+                        <div class="px-5 py-6 text-center text-slate-400 text-sm font-semibold">Belum ada data pelanggan.</div>
                     @endforelse
                 </div>
             </div>
@@ -337,6 +363,93 @@
     @endif
 
 </div>
+
+    {{-- ============================================== --}}
+    {{-- MODALS                                         --}}
+    {{-- ============================================== --}}
+    @if($isMarketingModalOpen)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden">
+                <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50">
+                    <h3 class="font-headline font-bold text-lg text-charcoal">Drill-down Marketing</h3>
+                    <button wire:click="closeMarketingModal" class="text-slate-400 hover:text-red-500 transition-colors">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <p class="text-sm text-slate-500 mb-4">Pelanggan yang ditangani oleh <span class="font-bold text-charcoal">{{ $selectedMarketingName }}</span> ({{ $filterText }}):</p>
+                    <div class="max-h-64 overflow-y-auto pr-2 divide-y divide-slate-100">
+                        @forelse($marketingDrilldownData as $idx => $data)
+                            <div class="py-3 flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold">{{ $idx + 1 }}</div>
+                                    <p class="font-semibold text-charcoal text-sm">{{ $data->pelanggan->nama }}</p>
+                                </div>
+                                <div class="text-right">
+                                    @if($isOwner)
+                                        <p class="text-sm font-bold text-emerald-600">Rp {{ number_format($data->total_revenue, 0, ',', '.') }}</p>
+                                        <p class="text-[10px] text-slate-400">{{ $data->total_nota }} Nota</p>
+                                    @else
+                                        <p class="text-sm font-bold text-emerald-600">{{ $data->total_nota }} Nota</p>
+                                    @endif
+                                </div>
+                            </div>
+                        @empty
+                            <p class="text-center text-sm text-slate-400 py-4">Tidak ada data pelanggan.</p>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if($isCustomerModalOpen)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-xl mx-4 overflow-hidden">
+                <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50">
+                    <h3 class="font-headline font-bold text-lg text-charcoal">Drill-down Pelanggan</h3>
+                    <button wire:click="closeCustomerModal" class="text-slate-400 hover:text-red-500 transition-colors">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <p class="text-sm text-slate-500 mb-2">Profil belanja <span class="font-bold text-charcoal">{{ $selectedCustomerName }}</span> ({{ $filterText }})</p>
+                    
+                    <div class="mb-4 p-3 bg-blue-50 rounded-xl">
+                        <p class="text-xs font-bold text-blue-800 uppercase mb-1">Dilayani Oleh Marketing:</p>
+                        <p class="text-sm text-blue-900">
+                            @if(count($customerDrilldownMarketing) > 0)
+                                {{ implode(', ', $customerDrilldownMarketing) }}
+                            @else
+                                <span class="italic">Tidak ada / Tanpa Marketing</span>
+                            @endif
+                        </p>
+                    </div>
+
+                    <p class="text-xs font-bold text-slate-500 uppercase mb-2">Produk Paling Sering Dibeli:</p>
+                    <div class="max-h-56 overflow-y-auto pr-2 divide-y divide-slate-100">
+                        @forelse($customerDrilldownProducts as $idx => $prod)
+                            <div class="py-3 flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold">{{ $idx + 1 }}</div>
+                                    <div>
+                                        <p class="font-semibold text-charcoal text-sm">{{ $prod->produk->nama_produk }}</p>
+                                        <p class="text-xs text-slate-500">{{ $prod->total_jumlah + 0 }} qty</p>
+                                    </div>
+                                </div>
+                                @if($isOwner)
+                                    <p class="text-sm font-bold text-emerald-600">Rp {{ number_format($prod->total_subtotal, 0, ',', '.') }}</p>
+                                @endif
+                            </div>
+                        @empty
+                            <p class="text-center text-sm text-slate-400 py-4">Tidak ada data produk.</p>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
 
 {{-- ============================================== --}}
 {{-- ANIMATIONS & CHART SCRIPTS                     --}}
