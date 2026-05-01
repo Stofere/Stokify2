@@ -104,7 +104,7 @@ class KasirPos extends Component
     // --- FUNGSI KERANJANG ---
     public function tambahKeKeranjang(int $idProduk)
     {
-        $produk = Produk::find($idProduk);
+        $produk = Produk::with('kategori')->find($idProduk);
         if (!$produk || !$produk->status_aktif) return;
 
         $index = collect($this->keranjang)->search(fn($item) => $item['id_produk'] === $idProduk);
@@ -120,6 +120,8 @@ class KasirPos extends Component
             
             // Cek apakah barang ini punya Harga Meter (Dual Unit)
             $hasEceran = isset($produk->metadata['harga_meter']);
+            // Flag: Kabel (lacak_rol) → tidak perlu input potong fisik terpisah
+            $isKabel = $produk->kategori->lacak_rol ?? false;
 
             $this->keranjang[] = [
                 'id_produk' => $produk->id_produk,
@@ -131,6 +133,7 @@ class KasirPos extends Component
                 'has_eceran' => $hasEceran,
                 'harga_eceran' => $hasEceran ? $produk->metadata['harga_meter'] : 0,
                 'tipe_jual' => 'utama', // 'utama' (KG/Pcs) atau 'eceran' (Meter)
+                'is_kabel' => $isKabel, // Kabel: potong gudang = jumlah jual (tanpa input terpisah)
                 
                 // Input User
                 'jumlah_jual' => 1, // Angka yang tampil di nota (Bisa Meter / KG)
@@ -149,12 +152,18 @@ class KasirPos extends Component
     public function gantiTipeJual($index, $tipe)
     {
         $this->keranjang[$index]['tipe_jual'] = $tipe;
+        $isKabel = $this->keranjang[$index]['is_kabel'] ?? false;
         
         if ($tipe === 'eceran') {
             // Jika pindah ke Meter, ubah harga yang terpakai ke harga meteran
             $this->keranjang[$index]['harga_terpakai'] = $this->keranjang[$index]['harga_eceran'];
-            // Reset input gudang jadi 0 agar kasir ingat untuk menimbang
-            $this->keranjang[$index]['jumlah_potong_gudang'] = 0; 
+            if ($isKabel) {
+                // Kabel: potong gudang selalu sync dengan jumlah jual (tanpa input manual terpisah)
+                $this->keranjang[$index]['jumlah_potong_gudang'] = $this->keranjang[$index]['jumlah_jual'];
+            } else {
+                // Kertas Film: Reset input gudang jadi 0 agar kasir ingat untuk menimbang
+                $this->keranjang[$index]['jumlah_potong_gudang'] = 0; 
+            }
         } else {
             $this->keranjang[$index]['harga_terpakai'] = $this->keranjang[$index]['harga_utama'];
             // Jika KG, maka jumlah jual sama dengan jumlah potong gudang
@@ -190,9 +199,14 @@ class KasirPos extends Component
             
             $this->keranjang[$index][$field] = $val;
 
+            $isKabel = $this->keranjang[$index]['is_kabel'] ?? false;
+
             // Jika jual "Utama" (KG), maka jumlah potong gudang harus ngikut jumlah jual
-            if ($tipeJual === 'utama' && $field === 'jumlah_jual') {
-                $this->keranjang[$index]['jumlah_potong_gudang'] = $val;
+            // Jika Kabel dan jual eceran (Meter), potong gudang juga ngikut jumlah jual (tanpa input manual)
+            if ($field === 'jumlah_jual') {
+                if ($tipeJual === 'utama' || ($tipeJual === 'eceran' && $isKabel)) {
+                    $this->keranjang[$index]['jumlah_potong_gudang'] = $val;
+                }
             }
 
             $this->kalkulasiBaris($index);
@@ -275,8 +289,9 @@ class KasirPos extends Component
                 return;
             }
 
-            // Jika jual meter tapi belum ditimbang → tolak
-            if ($item['has_eceran'] && $item['tipe_jual'] === 'eceran' && $item['jumlah_potong_gudang'] <= 0) {
+            // Jika jual meter tapi belum ditimbang → tolak (hanya untuk non-Kabel seperti Kertas Film)
+            $isKabelItem = $item['is_kabel'] ?? false;
+            if ($item['has_eceran'] && $item['tipe_jual'] === 'eceran' && !$isKabelItem && $item['jumlah_potong_gudang'] <= 0) {
                 $this->addError('checkout', "Barang {$item['nama_produk']} dijual per Meter, wajib isi berat timbangan (KG)!");
                 return;
             }
@@ -320,6 +335,7 @@ class KasirPos extends Component
                     DB::commit(); // Konfirmasi semua perubahan database (Pelanggan + Transaksi)
 
                     session()->flash('sukses', "Transaksi berhasil! Nomor Nota: " . $nota->kode_nota);
+                    $this->dispatch('transaksi-sukses');
                     
                     // Reset seluruh State (tapi pertahankan tanggal_transaksi untuk batch input)
                     $tanggalSebelumnya = $this->tanggal_transaksi;

@@ -95,7 +95,7 @@ class ProdukIndex extends Component
     {
         $this->validate([
             'id_kategori' => 'required',
-            'kode_barang' => 'required|unique:produk,kode_barang,' . $this->edit_id . ',id_produk',
+            'kode_barang' => 'nullable|unique:produk,kode_barang,' . $this->edit_id . ',id_produk',
             'nama_produk' => 'required|string|max:255',
             'satuan' => 'required|string',
             'harga_jual_satuan' => 'required|numeric|min:0',
@@ -123,12 +123,12 @@ class ProdukIndex extends Component
         }
 
         $metaString = !empty($metadataFinal) ? implode(' ', array_values($metadataFinal)) : '';
-        $indexPencarian = strtolower($this->kode_barang . ' ' . $this->nama_produk . ' ' . $metaString);
+        $indexPencarian = strtolower(($this->kode_barang ?? '') . ' ' . $this->nama_produk . ' ' . $metaString);
 
         if ($this->edit_id) {
             Produk::find($this->edit_id)->update([
                 'id_kategori' => $this->id_kategori,
-                'kode_barang' => $this->kode_barang,
+                'kode_barang' => $this->kode_barang ?: null,
                 'nama_produk' => $this->nama_produk,
                 'satuan' => $this->satuan,
                 'harga_jual_satuan' => $this->harga_jual_satuan,
@@ -141,7 +141,7 @@ class ProdukIndex extends Component
         } else {
             Produk::create([
                 'id_kategori' => $this->id_kategori,
-                'kode_barang' => $this->kode_barang,
+                'kode_barang' => $this->kode_barang ?: null,
                 'nama_produk' => $this->nama_produk,
                 'satuan' => $this->satuan,
                 'harga_jual_satuan' => $this->harga_jual_satuan,

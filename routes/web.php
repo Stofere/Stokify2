@@ -16,6 +16,7 @@ use App\Livewire\Master\MarketingIndex;
 use App\Livewire\Master\ProdukIndex;
 use App\Livewire\Master\KategoriIndex;
 use App\Livewire\Master\AtributIndex;  
+use App\Livewire\Master\SystemSettings;
 
 
 // Route Authentication (Guest)
@@ -45,6 +46,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/master/kategori', KategoriIndex::class)->name('master.kategori');
         Route::get('/master/atribut', AtributIndex::class)->name('master.atribut');
+    Route::get('/master/pengaturan', SystemSettings::class)->name('master.pengaturan');
     
     // Proses Logout (Non-Livewire Standard Route)
     Route::post('/logout', function() {

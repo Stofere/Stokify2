@@ -1,19 +1,56 @@
 @php
     $isOwnerRole = Auth::user()->peran === 'OWNER';
+    $posBg = \App\Models\Setting::getValue('pos_background_image');
 @endphp
 
-<div class="flex flex-col md:flex-row h-[calc(100vh-3.5rem)] overflow-hidden fade-in"
-     x-data="{ showPrices: true }">
+<div class="flex flex-col md:flex-row h-[calc(100vh-3.5rem)] overflow-hidden fade-in relative"
+     x-data="{ 
+        showPrices: true,
+        jam: '',
+        initClock() {
+            const update = () => {
+                const now = new Date();
+                const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][now.getDay()];
+                const tgl = String(now.getDate()).padStart(2,'0');
+                const bln = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'][now.getMonth()];
+                const jam = String(now.getHours()).padStart(2,'0');
+                const mnt = String(now.getMinutes()).padStart(2,'0');
+                const dtk = String(now.getSeconds()).padStart(2,'0');
+                this.jam = `${hari}, ${tgl} ${bln} ${now.getFullYear()} — ${jam}:${mnt}:${dtk}`;
+            };
+            update();
+            setInterval(() => update(), 1000);
+        },
+        playSukses() {
+            try {
+                const audio = new Audio('/audio/transaksi-sukses.mp3');
+                audio.volume = 0.7;
+                audio.play().catch(() => {});
+            } catch(e) {}
+        }
+     }"
+     x-init="initClock()"
+     @transaksi-sukses.window="playSukses()">
+
+    {{-- Background Image (custom or default) --}}
+    @if($posBg)
+        <div class="absolute inset-0 z-0 flex items-center justify-center bg-slate-100/30">
+            <img src="{{ $posBg }}" alt="" class="max-w-full max-h-full object-contain opacity-30">
+        </div>
+    @endif
 
     {{-- ============================== --}}
     {{-- LEFT: PRODUCT CATALOG (70%)    --}}
     {{-- ============================== --}}
-    <section class="w-full md:w-[70%] h-full flex flex-col p-4 md:p-6 overflow-y-auto">
+    <section class="w-full md:w-[70%] h-full flex flex-col p-4 md:p-6 overflow-y-auto relative z-10">
 
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3">
             <div>
                 <h2 class="font-headline text-2xl font-bold {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }}">Point of Sale</h2>
-                <p class="text-slate-400 text-sm mt-0.5">Pilih barang untuk ditambahkan ke keranjang</p>
+                <div class="flex items-center gap-2 mt-0.5">
+                    <span class="material-symbols-outlined text-[14px] {{ $isOwnerRole ? 'text-blue-pro/60' : 'text-sage/60' }}">schedule</span>
+                    <p class="text-xs font-semibold {{ $isOwnerRole ? 'text-blue-pro/70' : 'text-sage/80' }} font-mono tracking-wide" x-text="jam"></p>
+                </div>
             </div>
             <div class="flex items-center gap-3">
                 <label class="flex items-center cursor-pointer gap-2">
@@ -45,7 +82,7 @@
                             {{ $isOwnerRole ? 'hover:shadow-md border border-slate-100' : 'hover:shadow-md' }}">
 
                     <div class="flex items-center justify-between">
-                        <span class="font-label text-[10px] font-bold tracking-widest uppercase {{ $isOwnerRole ? 'text-slate-400' : 'text-sage/70' }}">{{ $produk->kode_barang }}</span>
+                        <span class="font-label text-[10px] font-bold tracking-widest uppercase {{ $isOwnerRole ? 'text-slate-400' : 'text-sage/70' }}">{{ $produk->kode_barang ?? '—' }}</span>
                         <span class="material-symbols-outlined text-[18px] opacity-0 group-hover:opacity-100 transition-opacity {{ $isOwnerRole ? 'text-blue-pro' : 'text-sage' }}">add_circle</span>
                     </div>
 
@@ -239,36 +276,49 @@
 
                             {{-- JIKA BARANG MEMILIKI DUAL-UNIT (Bisa dijual per KG atau per METER) --}}
                             @if($item['has_eceran'])
+                                @php $isKabel = $item['is_kabel'] ?? false; @endphp
                                 <div class="bg-amber-50 p-2 rounded-lg border border-amber-100 mb-2">
                                     <div class="flex gap-2 mb-2">
                                         <button wire:click="gantiTipeJual({{ $index }}, 'utama')" class="flex-1 text-[10px] font-bold py-1 rounded {{ $item['tipe_jual'] == 'utama' ? 'bg-amber-500 text-white' : 'bg-white text-amber-600 border border-amber-200' }}">JUAL PER {{ strtoupper($item['satuan_utama']) }}</button>
                                         <button wire:click="gantiTipeJual({{ $index }}, 'eceran')" class="flex-1 text-[10px] font-bold py-1 rounded {{ $item['tipe_jual'] == 'eceran' ? 'bg-amber-500 text-white' : 'bg-white text-amber-600 border border-amber-200' }}">JUAL PER METER</button>
                                     </div>
                                     
-                                    <div class="flex items-center gap-2">
-                                        {{-- Input 1: Panjang Meter / KG (Untuk Nota) --}}
-                                        <div class="flex-1">
-                                            <label class="block text-[9px] font-bold text-amber-700 uppercase">Jml Nota ({{ $item['tipe_jual'] == 'eceran' ? 'Meter' : strtoupper($item['satuan_utama']) }})</label>
+                                    @if($isKabel)
+                                        {{-- KABEL: Hanya 1 input (jumlah jual), potong gudang auto-sync --}}
+                                        <div>
+                                            <label class="block text-[9px] font-bold text-amber-700 uppercase">Jumlah {{ $item['tipe_jual'] == 'eceran' ? 'Meter' : strtoupper($item['satuan_utama']) }}</label>
                                             <input type="text" inputmode="decimal" 
                                                    wire:model.live.debounce.500ms="keranjang.{{ $index }}.jumlah_jual" 
                                                    placeholder="0"
                                                    class="w-full text-center border-0 rounded text-sm p-2 font-bold bg-white focus:ring-1 focus:ring-amber-500">
                                         </div>
-                                        <span class="text-amber-300 font-bold mt-4">&rarr;</span>
-                                        {{-- Input 2: Berat Timbangan (Hanya bisa diubah jika mode Eceran/Meter) --}}
-                                        <div class="flex-1">
-                                            <label class="block text-[9px] font-bold {{ $item['tipe_jual'] == 'eceran' ? 'text-red-600' : 'text-amber-700' }} uppercase">Potong Fisik ({{ strtoupper($item['satuan_utama']) }})</label>
-                                            <input type="text" inputmode="decimal" 
-                                                   wire:model.live.debounce.500ms="keranjang.{{ $index }}.jumlah_potong_gudang" 
-                                                   placeholder="Ketik berat"
-                                                   {{ $item['tipe_jual'] == 'utama' ? 'readonly' : '' }} 
-                                                   class="w-full text-center border-0 rounded text-sm p-2 font-bold {{ $item['tipe_jual'] == 'eceran' ? 'bg-red-50 text-red-700 ring-1 ring-red-300' : 'bg-amber-100 text-amber-700 opacity-70' }}">
+                                    @else
+                                        {{-- KERTAS FILM: 2 input (jumlah nota + potong fisik KG) --}}
+                                        <div class="flex items-center gap-2">
+                                            {{-- Input 1: Panjang Meter / KG (Untuk Nota) --}}
+                                            <div class="flex-1">
+                                                <label class="block text-[9px] font-bold text-amber-700 uppercase">Jml Nota ({{ $item['tipe_jual'] == 'eceran' ? 'Meter' : strtoupper($item['satuan_utama']) }})</label>
+                                                <input type="text" inputmode="decimal" 
+                                                       wire:model.live.debounce.500ms="keranjang.{{ $index }}.jumlah_jual" 
+                                                       placeholder="0"
+                                                       class="w-full text-center border-0 rounded text-sm p-2 font-bold bg-white focus:ring-1 focus:ring-amber-500">
+                                            </div>
+                                            <span class="text-amber-300 font-bold mt-4">&rarr;</span>
+                                            {{-- Input 2: Berat Timbangan (Hanya bisa diubah jika mode Eceran/Meter) --}}
+                                            <div class="flex-1">
+                                                <label class="block text-[9px] font-bold {{ $item['tipe_jual'] == 'eceran' ? 'text-red-600' : 'text-amber-700' }} uppercase">Potong Fisik ({{ strtoupper($item['satuan_utama']) }})</label>
+                                                <input type="text" inputmode="decimal" 
+                                                       wire:model.live.debounce.500ms="keranjang.{{ $index }}.jumlah_potong_gudang" 
+                                                       placeholder="Ketik berat"
+                                                       {{ $item['tipe_jual'] == 'utama' ? 'readonly' : '' }} 
+                                                       class="w-full text-center border-0 rounded text-sm p-2 font-bold {{ $item['tipe_jual'] == 'eceran' ? 'bg-red-50 text-red-700 ring-1 ring-red-300' : 'bg-amber-100 text-amber-700 opacity-70' }}">
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    {{-- Warning: Wajib Timbang --}}
-                                    @if($item['tipe_jual'] == 'eceran' && $item['jumlah_potong_gudang'] <= 0)
-                                        <p class="text-[9px] text-red-500 font-bold mt-1.5 italic text-center">⚖️ Wajib Timbang! Isi fisik yg terpotong dari gudang.</p>
+                                        {{-- Warning: Wajib Timbang --}}
+                                        @if($item['tipe_jual'] == 'eceran' && $item['jumlah_potong_gudang'] <= 0)
+                                            <p class="text-[9px] text-red-500 font-bold mt-1.5 italic text-center">⚖️ Wajib Timbang! Isi fisik yg terpotong dari gudang.</p>
+                                        @endif
                                     @endif
 
                                     {{-- Warning: Stok Limit --}}
@@ -339,7 +389,7 @@
                 </div>
 
                 <div class="p-6 overflow-y-auto bg-slate-50 flex-1">
-                    <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
                             <p class="text-[10px] font-label font-bold text-slate-400 uppercase tracking-widest mb-1">Pelanggan</p>
                             <p class="text-base font-headline font-bold text-charcoal">{{ $pelangganTerpilihNama }}</p>
@@ -347,6 +397,12 @@
                         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
                             <p class="text-[10px] font-label font-bold text-slate-400 uppercase tracking-widest mb-1">Marketing / Sales</p>
                             <p class="text-base font-headline font-bold text-charcoal">{{ $marketingTerpilihNama }}</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                            <p class="text-[10px] font-label font-bold text-slate-400 uppercase tracking-widest mb-1">Tanggal Transaksi</p>
+                            <p class="text-sm font-headline font-bold text-charcoal">
+                                {{ \Carbon\Carbon::parse($tanggal_transaksi)->locale('id')->translatedFormat('d M Y - H:i') }}
+                            </p>
                         </div>
                     </div>
 

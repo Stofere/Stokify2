@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('produk', function (Blueprint $table) {
             $table->id('id_produk');
             $table->unsignedBigInteger('id_kategori');
-            $table->string('kode_barang', 255)->unique();
-            $table->string('nama_produk', 255);
+            $table->string('kode_barang', 255)->nullable()->unique();
+            $table->string('nama_produk', 255)->unique();
             $table->string('satuan', 50);
             $table->decimal('harga_jual_satuan', 15, 2)->default(0.00);
             $table->boolean('lacak_stok')->default(true);

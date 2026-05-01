@@ -59,7 +59,7 @@
                             <h4 class="font-semibold text-sm {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }} border-b pb-2 {{ $isOwnerRole ? 'border-slate-200' : 'border-sage/15' }}">Info Dasar Barang</h4>
 
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Kode Barang (SKU)</label>
+                                <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Kode Barang (SKU) <span class="text-slate-400 normal-case">(Opsional)</span></label>
                                 <input type="text" wire:model="kode_barang" placeholder="Contoh: FR-12-CN-GRS" class="w-full border-0 rounded-lg p-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }} uppercase font-semibold">
                                 @error('kode_barang') <span class="text-red-500 text-xs mt-1 block font-semibold">{{ $message }}</span> @enderror
                             </div>
@@ -80,7 +80,23 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Harga Jual (Rp)</label>
-                                    <input type="number" wire:model="harga_jual_satuan" placeholder="150000" class="w-full border-0 rounded-lg p-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }}">
+                                    <div x-data="{
+                                        display: '',
+                                        init() {
+                                            this.display = this.formatNumber($wire.harga_jual_satuan || '');
+                                        },
+                                        formatNumber(val) {
+                                            val = String(val).replace(/[^\d]/g, '');
+                                            return val.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                        },
+                                        onInput() {
+                                            let raw = this.display.replace(/[^\d]/g, '');
+                                            this.display = this.formatNumber(raw);
+                                            $wire.set('harga_jual_satuan', parseInt(raw) || 0);
+                                        }
+                                    }">
+                                        <input type="text" inputmode="numeric" x-model="display" @input="onInput()" placeholder="150.000" class="w-full border-0 rounded-lg p-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }} font-semibold">
+                                    </div>
                                     @error('harga_jual_satuan') <span class="text-red-500 text-xs mt-1 block font-semibold">{{ $message }}</span> @enderror
                                 </div>
 
@@ -88,7 +104,23 @@
                                     <div class="col-span-2 mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                                         <label class="block text-sm font-bold text-amber-900 mb-1">Harga Eceran per Meter (Opsional)</label>
                                         <p class="text-[10px] text-amber-700 mb-2">Isi jika barang ini (Kertas Film/Kabel) bisa diecer per meter di kasir.</p>
-                                        <input type="number" wire:model="metadata_input.harga_meter" placeholder="Contoh: 15000" class="w-full border-amber-300 rounded-lg p-2.5 border focus:ring-amber-500 bg-white">
+                                        <div x-data="{
+                                            display: '',
+                                            init() {
+                                                this.display = this.formatNumber($wire.metadata_input?.harga_meter || '');
+                                            },
+                                            formatNumber(val) {
+                                                val = String(val).replace(/[^\d]/g, '');
+                                                return val.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                            },
+                                            onInput() {
+                                                let raw = this.display.replace(/[^\d]/g, '');
+                                                this.display = this.formatNumber(raw);
+                                                $wire.set('metadata_input.harga_meter', parseInt(raw) || 0);
+                                            }
+                                        }">
+                                            <input type="text" inputmode="numeric" x-model="display" @input="onInput()" placeholder="Contoh: 15.000" class="w-full border-amber-300 rounded-lg p-2.5 border focus:ring-amber-500 bg-white font-semibold">
+                                        </div>
                                     </div>
                                 @endif
 
@@ -198,7 +230,7 @@
                         <td class="p-4">
                             <p class="font-bold text-base leading-tight {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }}">{{ $prod->nama_produk }}</p>
                             <div class="flex items-center gap-2 mt-1.5 flex-wrap">
-                                <span class="text-[10px] font-mono bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-bold">{{ $prod->kode_barang }}</span>
+                                <span class="text-[10px] font-mono bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-bold">{{ $prod->kode_barang ?? '—' }}</span>
                                 <span class="text-[10px] {{ $isOwnerRole ? 'bg-blue-pro text-white' : 'bg-sage-dark text-white' }} px-2 py-0.5 rounded uppercase font-bold">{{ $prod->kategori->nama_kategori }}</span>
                                 @if($prod->lokasi)
                                     <span class="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-bold">📍 {{ $prod->lokasi }}</span>
@@ -282,7 +314,7 @@
                 <div>
                     <h3 class="font-headline text-xl font-bold flex items-center gap-2">
                         <span class="material-symbols-outlined text-[22px]">inventory_2</span>
-                        {{ $produk_stok_aktif->nama_produk }} ({{ $produk_stok_aktif->kode_barang }})
+                        {{ $produk_stok_aktif->nama_produk }} {{ $produk_stok_aktif->kode_barang ? '('.$produk_stok_aktif->kode_barang.')' : '' }}
                     </h3>
                     <p class="text-sm mt-0.5 opacity-80">Buku Mutasi & Koreksi Stok</p>
                 </div>

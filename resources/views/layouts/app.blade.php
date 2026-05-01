@@ -92,6 +92,9 @@
                     ['label' => 'Atribut', 'icon' => 'tune', 'href' => '/master/atribut', 'match' => 'master/atribut'],
                     ['label' => 'Pelanggan', 'icon' => 'group', 'href' => '/master/pelanggan', 'match' => 'master/pelanggan'],
                     ['label' => 'Marketing', 'icon' => 'campaign', 'href' => '/master/marketing', 'match' => 'master/marketing'],
+                    
+                    ['label' => '', 'divider' => true, 'text' => 'Sistem'],
+                    ['label' => 'Pengaturan', 'icon' => 'settings', 'href' => '/master/pengaturan', 'match' => 'master/pengaturan'],
                 ];
             @endphp
 
