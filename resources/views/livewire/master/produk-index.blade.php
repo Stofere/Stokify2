@@ -471,11 +471,17 @@
                                                     @if(strpos($riwayat->keterangan, '(Terjual') !== false)
                                                         @php
                                                             preg_match('/\(Terjual\s+(.*?)\)/', $riwayat->keterangan, $matches);
-                                                            $meterInfo = $matches[1] ?? '';
+                                                            $terjualInfo = $matches[1] ?? '';
+                                                            $isMeter = stripos($terjualInfo, 'Meter') !== false;
                                                         @endphp
-                                                        @if($meterInfo)
+                                                        @if($terjualInfo)
                                                             <div class="mt-1">
-                                                                <span class="text-[9px] text-amber-600 font-bold bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">{{ $meterInfo }}</span>
+                                                                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border
+                                                                    {{ $isMeter
+                                                                        ? 'text-amber-600 bg-amber-50 border-amber-100'
+                                                                        : 'text-blue-600 bg-blue-50 border-blue-100' }}">
+                                                                    Terjual {{ $terjualInfo }}
+                                                                </span>
                                                             </div>
                                                         @endif
                                                     @endif

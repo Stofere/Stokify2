@@ -96,11 +96,14 @@ class ProdukIndex extends Component
         $this->validate([
             'id_kategori' => 'required',
             'kode_barang' => 'nullable|unique:produk,kode_barang,' . $this->edit_id . ',id_produk',
-            'nama_produk' => 'required|string|max:255',
+            'nama_produk' => 'required|string|max:255|unique:produk,nama_produk,' . $this->edit_id . ',id_produk',
             'satuan' => 'required|string',
             'harga_jual_satuan' => 'required|numeric|min:0',
             'lacak_stok' => 'boolean',
             'lokasi' => 'nullable|string|max:255',
+        ], [
+            'nama_produk.unique' => 'Nama produk ini telah terpakai! Silakan gunakan nama lain.',
+            'kode_barang.unique' => 'Kode barang ini telah terpakai!',
         ]);
 
         $metadataFinal = [];

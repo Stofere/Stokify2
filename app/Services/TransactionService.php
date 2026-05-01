@@ -77,8 +77,9 @@ class TransactionService
                 ]);
 
                 // RIWAYAT STOK (CCTV):
-                // Harus mencatat mutasi fisik (KG), namun dengan keterangan bahwa ini terjual meter.
-                $ketTambahan = $item['tipe_jual'] === 'eceran' ? " (Terjual {$item['jumlah_jual']} Meter)" : "";
+                // Mencatat keterangan jumlah terjual untuk semua tipe jual (Meter maupun KG/satuan utama)
+                $satuanLabel = $item['tipe_jual'] === 'eceran' ? 'Meter' : strtoupper($produk->satuan);
+                $ketTambahan = " (Terjual {$item['jumlah_jual']} {$satuanLabel})";
                 
                 RiwayatStok::create([
                     'id_produk' => $produk->id_produk,
