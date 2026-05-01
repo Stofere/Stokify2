@@ -43,14 +43,7 @@
                 <tr>
                     <td class="center">{{ $nomor++ }}.</td>
                     <td style="font-family: monospace; font-size: 10px;">{{ $prod->kode_barang }}</td>
-                    <td>
-                        <strong>{{ $prod->nama_produk }}</strong>
-                        @if($prod->metadata)
-                            <span class="meta">
-                                @foreach($prod->metadata as $key => $val) [{{ $key }}: {{ is_array($val) ? implode(', ', $val) : $val }}] @endforeach
-                            </span>
-                        @endif
-                    </td>
+                    <td><strong>{{ $prod->nama_produk }}</strong></td>
                     <td class="center">
                         @if($prod->lacak_stok)
                             <span class="{{ $prod->stok_saat_ini <= 0 ? 'stok-habis' : 'stok-aman' }}">

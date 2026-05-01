@@ -5,6 +5,8 @@ namespace App\Livewire\Laporan;
 use Livewire\Component;
 use App\Models\TransaksiPenjualan;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Exports\PenjualanExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 
 class Penjualan extends Component
@@ -115,6 +117,21 @@ class Penjualan extends Component
         return response()->streamDownload(function () use ($pdf) {
             echo $pdf->stream();
         }, 'Laporan_Penjualan_' . $judulPeriode . '.pdf');
+    }
+
+    public function exportExcel()
+    {
+        $dataTransaksi = $this->getQuery();
+
+        $judulPeriode = '';
+        if ($this->tipe_filter === 'harian') $judulPeriode = Carbon::parse($this->filter_tanggal)->translatedFormat('d F Y');
+        if ($this->tipe_filter === 'bulanan') $judulPeriode = Carbon::create(null, $this->filter_bulan)->translatedFormat('F') . ' ' . $this->filter_tahun;
+        if ($this->tipe_filter === 'tahunan') $judulPeriode = "Tahun " . $this->filter_tahun;
+
+        return Excel::download(
+            new PenjualanExport($dataTransaksi, $judulPeriode, now()->translatedFormat('d F Y H:i')),
+            'Laporan_Penjualan_' . $judulPeriode . '.xlsx'
+        );
     }
 
     public function render()

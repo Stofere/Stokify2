@@ -12,8 +12,12 @@
                 @endforeach
             </select>
             <button wire:click="cetakPdf" wire:loading.attr="disabled" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg font-bold shadow transition flex items-center gap-2 shrink-0">
-                <span wire:loading.remove>📄 Cetak PDF</span>
-                <span wire:loading>Memproses...</span>
+                <span wire:loading.remove wire:target="cetakPdf">📄 PDF</span>
+                <span wire:loading wire:target="cetakPdf">Memproses...</span>
+            </button>
+            <button wire:click="exportExcel" wire:loading.attr="disabled" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg font-bold shadow transition flex items-center gap-2 shrink-0">
+                <span wire:loading.remove wire:target="exportExcel">📊 Excel</span>
+                <span wire:loading wire:target="exportExcel">Memproses...</span>
             </button>
         </div>
     </div>

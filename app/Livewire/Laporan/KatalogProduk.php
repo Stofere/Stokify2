@@ -6,6 +6,8 @@ use Livewire\Component;
 use App\Models\Produk;
 use App\Models\Kategori;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Exports\KatalogProdukExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class KatalogProduk extends Component
 {
@@ -43,6 +45,18 @@ class KatalogProduk extends Component
         return response()->streamDownload(function () use ($pdf) {
             echo $pdf->stream();
         }, 'Katalog_Produk_' . now()->format('Ymd') . '.pdf');
+    }
+
+    public function exportExcel()
+    {
+        $groupedProduk = $this->getGroupedData();
+        $namaKategori = $this->filterKategori ? Kategori::find($this->filterKategori)->nama_kategori : 'Semua Kategori';
+        $tanggal = now()->translatedFormat('d F Y');
+
+        return Excel::download(
+            new KatalogProdukExport($groupedProduk, $namaKategori, $tanggal),
+            'Katalog_Produk_' . now()->format('Ymd') . '.xlsx'
+        );
     }
 
     public function render()

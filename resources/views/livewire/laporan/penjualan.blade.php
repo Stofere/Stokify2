@@ -40,10 +40,14 @@
             </div>
         @endif
 
-        <div class="ml-auto">
+        <div class="ml-auto flex items-center gap-3">
             <button wire:click="cetakPdf" wire:loading.attr="disabled" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg font-bold shadow flex items-center gap-2">
-                <span wire:loading.remove>📄 Cetak Laporan PDF (Detail)</span>
-                <span wire:loading>Memproses PDF...</span>
+                <span wire:loading.remove wire:target="cetakPdf">📄 PDF</span>
+                <span wire:loading wire:target="cetakPdf">Memproses...</span>
+            </button>
+            <button wire:click="exportExcel" wire:loading.attr="disabled" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg font-bold shadow flex items-center gap-2">
+                <span wire:loading.remove wire:target="exportExcel">📊 Excel</span>
+                <span wire:loading wire:target="exportExcel">Memproses...</span>
             </button>
         </div>
     </div>
