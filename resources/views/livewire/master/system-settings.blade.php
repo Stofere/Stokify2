@@ -46,29 +46,51 @@
                 @endif
             </div>
 
-            {{-- Upload --}}
-            <div class="flex flex-col sm:flex-row gap-3 items-start">
-                <div class="flex-1">
+            {{-- Upload + Preview (Alpine.js FileReader: tidak bergantung endpoint server) --}}
+            <div x-data="{ localPreview: null, hasFile: false }"
+                 x-on:change.capture="
+                    const f = $event.target.files?.[0];
+                    if (f) {
+                        hasFile = true;
+                        const reader = new FileReader();
+                        reader.onload = e => localPreview = e.target.result;
+                        reader.readAsDataURL(f);
+                    } else {
+                        hasFile = false;
+                        localPreview = null;
+                    }
+                 "
+                 class="flex flex-col gap-4">
+
+                {{-- Input file --}}
+                <div>
                     <input type="file" wire:model="pos_background_image" accept="image/*"
                            class="w-full text-sm text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold {{ $isOwnerRole ? 'file:bg-blue-50 file:text-blue-pro' : 'file:bg-sage-light file:text-sage-dark' }} hover:file:opacity-80 cursor-pointer">
                     @error('pos_background_image') <span class="text-red-500 text-xs mt-1 block font-semibold">{{ $message }}</span> @enderror
-                    
-                    {{-- Temp Preview --}}
-                    @if($pos_background_image)
-                        <div class="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-                            <p class="text-[10px] text-amber-700 font-bold uppercase mb-1">Preview Gambar Baru:</p>
-                            <img src="{{ $pos_background_image->temporaryUrl() }}" alt="Preview" class="w-full h-40 object-contain rounded-lg bg-slate-100">
-                        </div>
-                    @endif
                 </div>
-                <div class="flex gap-2 shrink-0">
-                    <button wire:click="simpanBackground" 
-                            {{ !$pos_background_image ? 'disabled' : '' }}
+
+                {{-- Preview Gambar Baru (dari FileReader, tidak lewat server) --}}
+                <div x-show="localPreview" x-cloak class="p-2 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p class="text-[10px] text-amber-700 font-bold uppercase mb-2 tracking-wider">Preview Gambar Baru (Sebelum Disimpan):</p>
+                    <div class="rounded-lg overflow-hidden bg-slate-100" style="background-image: repeating-conic-gradient(#e0e0e0 0% 25%, transparent 0% 50%); background-size: 16px 16px;">
+                        <img :src="localPreview" alt="Preview" class="w-full h-48 object-contain">
+                    </div>
+                </div>
+
+                {{-- Wire loading indicator --}}
+                <div wire:loading wire:target="pos_background_image" class="text-xs text-slate-500 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[16px] animate-spin">refresh</span> Mengupload ke server...
+                </div>
+
+                {{-- Tombol aksi --}}
+                <div class="flex gap-2">
+                    <button wire:click="simpanBackground"
+                            x-bind:disabled="!hasFile"
                             class="px-5 py-2.5 rounded-xl font-bold text-sm text-white shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed {{ $isOwnerRole ? 'bg-blue-pro hover:bg-blue-800' : 'bg-sage-dark hover:bg-sage' }}">
-                        <span class="material-symbols-outlined text-[16px] align-middle mr-1">save</span> Simpan
+                        <span class="material-symbols-outlined text-[16px] align-middle mr-1">save</span> Simpan Background
                     </button>
                     @if($pos_background_preview)
-                        <button wire:click="hapusBackground" 
+                        <button wire:click="hapusBackground"
                                 class="px-5 py-2.5 rounded-xl font-bold text-sm bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors">
                             <span class="material-symbols-outlined text-[16px] align-middle mr-1">delete</span> Hapus
                         </button>
