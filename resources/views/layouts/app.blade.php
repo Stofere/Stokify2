@@ -4,45 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stokify POS V2 - Enterprise</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        'headline': ['Noto Serif', 'serif'],
-                        'body': ['Manrope', 'sans-serif'],
-                        'label': ['Manrope', 'sans-serif'],
-                    },
-                    colors: {
-                        'sage':       '#84A59D',
-                        'sage-dark':  '#45645E',
-                        'sage-light': '#E0F2F1',
-                        'sage-bg':    '#F1F3F2',
-                        'gold':       '#D4AF37',
-                        'gold-light': '#FEF3C7',
-                        'slate-pro':  '#475569',
-                        'blue-pro':   '#1E3A8A',
-                        'charcoal':   '#334155',
-                    }
-                }
-            }
-        }
-    </script>
-
-    <style>
-        [x-cloak] { display: none !important; }
-        body { font-family: 'Manrope', sans-serif; }
-        .sidebar-transition { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        /* Scrollbar styling */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #c1c8c5; border-radius: 99px; }
-    </style>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
 
