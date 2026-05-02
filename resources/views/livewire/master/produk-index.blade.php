@@ -83,7 +83,9 @@
                                     <div x-data="{
                                         display: '',
                                         init() {
-                                            this.display = this.formatNumber($wire.harga_jual_satuan || '');
+                                            // Math.round(parseFloat()) agar '45000.00' tidak jadi '4500000'
+                                            const angka = Math.round(parseFloat($wire.harga_jual_satuan) || 0);
+                                            this.display = angka > 0 ? this.formatNumber(String(angka)) : '';
                                         },
                                         formatNumber(val) {
                                             val = String(val).replace(/[^\d]/g, '');
@@ -107,7 +109,8 @@
                                         <div x-data="{
                                             display: '',
                                             init() {
-                                                this.display = this.formatNumber($wire.metadata_input?.harga_meter || '');
+                                                const angka = Math.round(parseFloat($wire.metadata_input?.harga_meter) || 0);
+                                                this.display = angka > 0 ? this.formatNumber(String(angka)) : '';
                                             },
                                             formatNumber(val) {
                                                 val = String(val).replace(/[^\d]/g, '');
