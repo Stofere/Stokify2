@@ -27,19 +27,36 @@
     @endif
 
     {{-- ================================================================ --}}
-    {{-- FORMULIR TAMBAH / EDIT BARANG                                    --}}
+    {{-- MODAL FORMULIR TAMBAH / EDIT BARANG                              --}}
     {{-- ================================================================ --}}
     @if($form_open)
-        <div class="bg-white rounded-2xl overflow-hidden mb-6 {{ $isOwnerRole ? 'border border-slate-200' : '' }}">
-            <div class="px-6 py-4 border-b flex justify-between items-center {{ $isOwnerRole ? 'bg-slate-50 border-slate-200' : 'bg-sage-light/50 border-sage/10' }}">
-                <h3 class="font-headline text-lg font-bold {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }}">{{ $edit_id ? 'Perbarui Data Barang' : 'Form Barang Baru' }}</h3>
-                <button wire:click="resetForm" class="text-slate-400 hover:text-red-500 transition-colors">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
+        <div class="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8"
+             x-data x-on:keydown.escape.window="$wire.resetForm()">
 
-            <div class="p-6">
-                {{-- Step 1: Kategori --}}
+            {{-- Backdrop --}}
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" wire:click="resetForm"></div>
+
+            {{-- Modal Panel --}}
+            <div class="relative w-full max-w-4xl flex flex-col bg-white rounded-2xl shadow-2xl z-10" style="max-height: 90vh">
+
+                {{-- Header (Sticky) --}}
+                <div class="flex-shrink-0 px-6 py-4 border-b flex justify-between items-center rounded-t-2xl {{ $isOwnerRole ? 'bg-slate-50 border-slate-200' : 'bg-sage-light/50 border-sage/10' }}">
+                    <div>
+                        <h3 class="font-headline text-lg font-bold {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }}">
+                            {{ $edit_id ? 'Perbarui Data Barang' : 'Form Barang Baru' }}
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-0.5">
+                            {{ $edit_id ? 'Ubah detail dan spesifikasi barang.' : 'Isi informasi barang yang ingin didaftarkan.' }}
+                        </p>
+                    </div>
+                    <button wire:click="resetForm" class="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                {{-- Body (Scrollable) --}}
+                <div class="flex-1 overflow-y-auto p-6">
+                    {{-- Step 1: Kategori --}}
                 <div class="mb-6 p-4 rounded-xl relative {{ $isOwnerRole ? 'bg-slate-50' : 'bg-sage-light/30' }}">
                     <span class="absolute -top-2.5 -left-2.5 w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold text-white {{ $isOwnerRole ? 'bg-blue-pro' : 'bg-sage' }}">1</span>
                     <label class="block text-sm font-bold mb-2 {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }}">Kategori barang</label>
@@ -181,8 +198,13 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-between border-t pt-5 {{ $isOwnerRole ? 'border-slate-200' : 'border-sage/10' }}">
-                        <label class="flex items-center gap-3 cursor-pointer bg-slate-50 p-3 rounded-lg">
+                @endif
+                </div>{{-- /Body --}}
+
+                {{-- Footer (Sticky) — Lacak Stok + Aksi --}}
+                @if($id_kategori)
+                    <div class="flex-shrink-0 flex items-center justify-between border-t px-6 py-4 rounded-b-2xl {{ $isOwnerRole ? 'border-slate-200 bg-slate-50' : 'border-sage/10 bg-white' }}">
+                        <label class="flex items-center gap-3 cursor-pointer">
                             <input type="checkbox" wire:model="lacak_stok" class="w-5 h-5 rounded {{ $isOwnerRole ? 'text-blue-pro' : 'text-sage' }}">
                             <span class="font-semibold text-sm text-slate-700">Lacak Stok Barang Ini</span>
                         </label>
@@ -192,8 +214,9 @@
                         </div>
                     </div>
                 @endif
-            </div>
-        </div>
+
+            </div>{{-- /Modal Panel --}}
+        </div>{{-- /Modal Overlay --}}
     @endif
 
     {{-- ================================================================ --}}

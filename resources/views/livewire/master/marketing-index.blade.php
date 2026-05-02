@@ -19,34 +19,55 @@
         </div>
     @endif
 
+    {{-- Modal Tambah / Edit Marketing --}}
     @if($form_open)
-        <div class="bg-white rounded-2xl overflow-hidden mb-6 {{ $isOwnerRole ? 'border border-slate-200' : '' }}">
-            <div class="px-6 py-4 border-b flex justify-between items-center {{ $isOwnerRole ? 'bg-slate-50 border-slate-200' : 'bg-sage-light/50 border-sage/10' }}">
-                <h3 class="font-headline text-lg font-bold {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }}">{{ $edit_id ? 'Edit Marketing' : 'Tambah Marketing Baru' }}</h3>
-                <button wire:click="resetForm" class="text-slate-400 hover:text-red-500 transition-colors"><span class="material-symbols-outlined">close</span></button>
-            </div>
-            <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div class="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            x-data x-on:keydown.escape.window="$wire.resetForm()">
+
+            {{-- Backdrop --}}
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" wire:click="resetForm"></div>
+
+            {{-- Modal Panel --}}
+            <div class="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl z-10 overflow-hidden">
+
+                {{-- Header --}}
+                <div class="px-6 py-4 border-b flex justify-between items-center {{ $isOwnerRole ? 'bg-slate-50 border-slate-200' : 'bg-sage-light/50 border-sage/10' }}">
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Nama Lengkap *</label>
-                        <input type="text" wire:model="nama" class="w-full border-0 rounded-lg p-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }}">
-                        @error('nama') <span class="text-red-500 text-xs font-semibold">{{ $message }}</span> @enderror
+                        <h3 class="font-headline text-base font-bold {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }}">{{ $edit_id ? 'Edit Marketing' : 'Tambah Marketing Baru' }}</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">{{ $edit_id ? 'Ubah informasi marketing.' : 'Isi data marketing baru.' }}</p>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">No. Telepon / WA</label>
-                        <input type="text" wire:model="telepon" class="w-full border-0 rounded-lg p-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }}">
+                    <button wire:click="resetForm" class="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                {{-- Body --}}
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Nama Lengkap *</label>
+                            <input type="text" wire:model="nama" class="w-full border-0 rounded-lg p-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }}">
+                            @error('nama') <span class="text-red-500 text-xs mt-1 font-semibold">{{ $message }}</span> @enderror
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">No. Telepon / WA</label>
+                            <input type="text" wire:model="telepon" class="w-full border-0 rounded-lg p-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }}">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Alamat</label>
+                            <input type="text" wire:model="alamat" class="w-full border-0 rounded-lg p-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }}">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Alamat</label>
-                        <input type="text" wire:model="alamat" class="w-full border-0 rounded-lg p-2.5 text-sm bg-slate-50 focus:ring-2 {{ $isOwnerRole ? 'focus:ring-blue-pro/20' : 'focus:ring-sage/20' }}">
+
+                    {{-- Footer --}}
+                    <div class="flex gap-2 justify-end border-t pt-4 {{ $isOwnerRole ? 'border-slate-200' : 'border-sage/10' }}">
+                        <button wire:click="resetForm" class="px-5 py-2.5 rounded-xl font-semibold text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">Batal</button>
+                        <button wire:click="simpan" class="px-6 py-2.5 rounded-xl font-bold text-sm text-white shadow-md {{ $isOwnerRole ? 'bg-blue-pro hover:bg-blue-800' : 'bg-sage-dark hover:bg-sage' }} transition-colors">Simpan</button>
                     </div>
                 </div>
-                <div class="flex gap-2">
-                    <button wire:click="simpan" class="px-6 py-2.5 rounded-xl font-bold text-sm text-white shadow-md {{ $isOwnerRole ? 'bg-blue-pro hover:bg-blue-800' : 'bg-sage-dark hover:bg-sage' }} transition-colors">Simpan</button>
-                    <button wire:click="resetForm" class="px-5 py-2.5 rounded-xl font-semibold text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">Batal</button>
-                </div>
-            </div>
-        </div>
+
+            </div>{{-- /Modal Panel --}}
+        </div>{{-- /Modal Overlay --}}
     @endif
 
     <div class="bg-white rounded-2xl overflow-hidden {{ $isOwnerRole ? 'border border-slate-200' : '' }}">
