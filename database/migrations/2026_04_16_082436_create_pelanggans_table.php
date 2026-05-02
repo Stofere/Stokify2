@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('pelanggan', function (Blueprint $table) {
             $table->id('id_pelanggan');
-            $table->string('nama', 255);
+            $table->string('nama', 255)->unique();
             $table->string('telepon', 50)->nullable();
             $table->text('alamat')->nullable();
             $table->boolean('aktif')->default(true);

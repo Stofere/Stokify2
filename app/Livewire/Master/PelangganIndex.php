@@ -15,9 +15,15 @@ class PelangganIndex extends Component
     public function simpan()
     {
         $this->validate([
-            'nama' => 'required|string|max:255',
+            'nama' => 'required|string|max:255|unique:pelanggan,nama',
             'telepon' => 'nullable|string|max:50',
             'alamat' => 'nullable|string',
+        ],[
+            'nama.unique' => 'Nama pelanggan sudah terdaftar.',
+            'nama.required' => 'Nama pelanggan wajib diisi.',
+            'nama.max' => 'Nama pelanggan maksimal 255 karakter.',
+            'telepon.max' => 'No. telepon maksimal 50 karakter.',
+            'alamat.max' => 'Alamat maksimal 255 karakter.',
         ]);
 
         if ($this->edit_id) {
