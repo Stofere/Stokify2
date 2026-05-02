@@ -4,6 +4,7 @@ namespace App\Livewire\Master;
 
 use Livewire\Component;
 use App\Models\Pelanggan;
+use Illuminate\Validation\Rule;
 
 class PelangganIndex extends Component
 {
@@ -15,7 +16,13 @@ class PelangganIndex extends Component
     public function simpan()
     {
         $this->validate([
-            'nama' => 'required|string|max:255|unique:pelanggan,nama',
+            'nama' => [
+            'required',
+            'string',
+            'max:255',
+            // Pengecekan unique, abaikan jika ID-nya sama dengan yang sedang diedit
+            Rule::unique('pelanggan', 'nama')->ignore($this->edit_id, 'id_pelanggan') 
+            ],
             'telepon' => 'nullable|string|max:50',
             'alamat' => 'nullable|string',
         ],[
@@ -25,7 +32,7 @@ class PelangganIndex extends Component
             'telepon.max' => 'No. telepon maksimal 50 karakter.',
             'alamat.max' => 'Alamat maksimal 255 karakter.',
         ]);
-
+        
         if ($this->edit_id) {
             Pelanggan::find($this->edit_id)->update([
                 'nama' => $this->nama,
@@ -41,12 +48,13 @@ class PelangganIndex extends Component
             ]);
             session()->flash('sukses', 'Pelanggan baru berhasil ditambahkan.');
         }
-
         $this->resetForm();
     }
 
     public function edit($id)
     {
+        $this->resetValidation();
+        
         $plg = Pelanggan::find($id);
         $this->edit_id = $plg->id_pelanggan;
         $this->nama = $plg->nama;
@@ -65,6 +73,7 @@ class PelangganIndex extends Component
     public function resetForm()
     {
         $this->reset(['nama', 'telepon', 'alamat', 'edit_id']);
+        $this->resetValidation();
         $this->form_open = false;
     }
 
