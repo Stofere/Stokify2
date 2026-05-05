@@ -317,7 +317,7 @@
                                         Buku Stok
                                     </button>
                                 @endif
-                                <button wire:click="edit({{ $prod->id_produk }})" class="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-200 transition-colors">Edit</button>
+                                <button @click="$dispatch('confirm-edit', { id: {{ $prod->id_produk }}, nama: '{{ addslashes($prod->nama_produk) }}' })" class="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-200 transition-colors">Edit</button>
                             </div>
                         </td>
                     </tr>
@@ -854,4 +854,82 @@
             </div>
         </div>
     @endif
+
+    {{-- ================================================================ --}}
+    {{-- MODAL KONFIRMASI EDIT PRODUK                                     --}}
+    {{-- ================================================================ --}}
+    <div x-data="{ 
+            showEditConfirm: false, 
+            editId: null, 
+            editNama: '' 
+         }"
+         x-on:confirm-edit.window="showEditConfirm = true; editId = $event.detail.id; editNama = $event.detail.nama"
+         x-on:keydown.escape.window="showEditConfirm = false"
+    >
+        {{-- Backdrop --}}
+        <div x-show="showEditConfirm"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70]"
+             @click="showEditConfirm = false"
+             style="display: none;"
+        ></div>
+
+        {{-- Modal Panel --}}
+        <div x-show="showEditConfirm"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-90"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-90"
+             class="fixed inset-0 z-[75] flex items-center justify-center p-4"
+             style="display: none;"
+        >
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border-t-4 {{ $isOwnerRole ? 'border-blue-pro' : 'border-sage' }}"
+                 @click.away="showEditConfirm = false">
+                
+                {{-- Header --}}
+                <div class="px-6 py-5 text-center {{ $isOwnerRole ? 'bg-slate-50' : 'bg-sage-light/30' }}">
+                    <div class="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-3 {{ $isOwnerRole ? 'bg-blue-100' : 'bg-sage-light' }}">
+                        <span class="material-symbols-outlined text-[32px] {{ $isOwnerRole ? 'text-blue-pro' : 'text-sage-dark' }}">edit_note</span>
+                    </div>
+                    <h3 class="font-headline text-lg font-bold {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }}">Konfirmasi Edit Barang</h3>
+                    <p class="text-slate-400 text-sm mt-1">Apakah Anda yakin ingin mengubah data produk ini?</p>
+                </div>
+
+                {{-- Body --}}
+                <div class="px-6 py-4">
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Produk yang akan diedit</p>
+                        <p class="font-bold text-base {{ $isOwnerRole ? 'text-charcoal' : 'text-sage-dark' }}" x-text="editNama"></p>
+                    </div>
+                    <div class="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                        <span class="material-symbols-outlined text-amber-500 text-[18px] mt-0.5 shrink-0">info</span>
+                        <p class="text-xs text-amber-700 font-medium">Pastikan Anda benar-benar ingin mengedit barang ini. Perubahan yang disimpan akan mengubah data produk di sistem.</p>
+                    </div>
+                </div>
+
+                {{-- Footer --}}
+                <div class="px-6 py-4 border-t border-slate-100 flex gap-3">
+                    <button @click="showEditConfirm = false" 
+                            class="flex-1 px-5 py-2.5 rounded-xl font-semibold text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
+                        Batal
+                    </button>
+                    <button @click="showEditConfirm = false; $wire.edit(editId)" 
+                            class="flex-1 px-5 py-2.5 rounded-xl font-bold text-sm text-white shadow-md transition-all active:scale-[0.98] {{ $isOwnerRole ? 'bg-blue-pro hover:bg-blue-800' : 'bg-sage-dark hover:bg-sage' }}">
+                        <span class="flex items-center justify-center gap-1.5">
+                            <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                            Ya, Edit Produk
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
